@@ -48,9 +48,24 @@ pub fn collect_all_components(
         }
 
         let data = match comp_cfg.id {
-            ComponentId::Model => ModelComponent::new()
-                .with_per_model(comp_cfg.icon.per_model.clone())
-                .collect(input),
+            ComponentId::Model => {
+                let show_effort = comp_cfg
+                    .options
+                    .get("show_effort")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let thinking_icon = comp_cfg
+                    .options
+                    .get("thinking_icon")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                ModelComponent::new()
+                    .with_per_model(comp_cfg.icon.per_model.clone())
+                    .with_effort(show_effort)
+                    .with_thinking_icon(thinking_icon)
+                    .collect(input)
+            }
             ComponentId::Directory => DirectoryComponent::new().collect(input),
             ComponentId::Git => {
                 let show_sha = comp_cfg

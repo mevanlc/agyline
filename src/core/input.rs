@@ -5,6 +5,8 @@ use std::collections::HashMap;
 pub struct InputData {
     pub model: Model,
     pub workspace: Workspace,
+    pub effort: Option<Effort>,
+    pub thinking: Option<Thinking>,
     pub transcript_path: String,
     pub cost: Option<Cost>,
     pub output_style: Option<OutputStyle>,
@@ -19,6 +21,16 @@ pub struct Model {
 #[derive(Deserialize)]
 pub struct Workspace {
     pub current_dir: String,
+}
+
+#[derive(Deserialize)]
+pub struct Effort {
+    pub level: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct Thinking {
+    pub enabled: Option<bool>,
 }
 
 #[derive(Deserialize)]

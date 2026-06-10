@@ -16,6 +16,8 @@ pub enum FieldSelection {
     PlainIcon,
     NerdFontIcon,
     PerModelIcons,
+    EffortLevel,
+    ThinkingIcon,
     OpusIcon,
     SonnetIcon,
     HaikuIcon,
@@ -36,6 +38,8 @@ impl FieldSelection {
             let pm_enabled = comp.icon.per_model.as_ref().is_some_and(|pm| pm.enabled);
             if pm_enabled {
                 fields.push(Self::PerModelIcons);
+                fields.push(Self::EffortLevel);
+                fields.push(Self::ThinkingIcon);
                 fields.push(Self::OpusIcon);
                 fields.push(Self::FableIcon);
                 fields.push(Self::MythosIcon);
@@ -45,6 +49,8 @@ impl FieldSelection {
                 fields.push(Self::PlainIcon);
                 fields.push(Self::NerdFontIcon);
                 fields.push(Self::PerModelIcons);
+                fields.push(Self::EffortLevel);
+                fields.push(Self::ThinkingIcon);
             }
         } else {
             fields.push(Self::PlainIcon);
@@ -117,6 +123,23 @@ impl EditorWidget {
                     let enabled = pm.is_some_and(|p| p.enabled);
                     ("Per-Model", if enabled { "Yes" } else { "No" }.into(), None)
                 }
+                FieldSelection::EffortLevel => {
+                    let enabled = comp
+                        .options
+                        .get("show_effort")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    ("Effort", if enabled { "Yes" } else { "No" }.into(), None)
+                }
+                FieldSelection::ThinkingIcon => (
+                    "Thinking Icon",
+                    comp.options
+                        .get("thinking_icon")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default()
+                        .into(),
+                    None,
+                ),
                 FieldSelection::OpusIcon => (
                     "Opus Icon",
                     pm.map_or(String::new(), |p| p.opus.clone()),

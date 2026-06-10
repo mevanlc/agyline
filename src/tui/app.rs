@@ -138,6 +138,7 @@ impl Default for ColorPickerState {
 pub enum IconPickerPurpose {
     PlainIcon,
     NerdFontIcon,
+    ThinkingIcon,
     OpusIcon,
     SonnetIcon,
     HaikuIcon,
@@ -494,6 +495,24 @@ impl App {
                                 self.selected_field = FieldSelection::PerModelIcons;
                             }
                             self.mark_dirty();
+                        }
+                        FieldSelection::EffortLevel => {
+                            let comp = &mut self.theme.components[self.selected_component];
+                            let enabled = comp
+                                .options
+                                .get("show_effort")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+                            comp.options
+                                .insert("show_effort".into(), serde_json::Value::Bool(!enabled));
+                            self.status_message = Some(format!(
+                                "Effort level {}",
+                                if enabled { "disabled" } else { "enabled" }
+                            ));
+                            self.mark_dirty();
+                        }
+                        FieldSelection::ThinkingIcon => {
+                            self.open_icon_picker(IconPickerPurpose::ThinkingIcon);
                         }
                         FieldSelection::OpusIcon => {
                             self.open_icon_picker(IconPickerPurpose::OpusIcon);
@@ -1213,6 +1232,12 @@ impl App {
             match purpose {
                 IconPickerPurpose::PlainIcon => comp.icon.plain.clone(),
                 IconPickerPurpose::NerdFontIcon => comp.icon.nerd_font.clone(),
+                IconPickerPurpose::ThinkingIcon => comp
+                    .options
+                    .get("thinking_icon")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string(),
                 IconPickerPurpose::OpusIcon => comp
                     .icon
                     .per_model
@@ -1465,6 +1490,11 @@ impl App {
                 IconPickerPurpose::NerdFontIcon => {
                     comp.icon.nerd_font = icon_str;
                     "Nerd Font icon"
+                }
+                IconPickerPurpose::ThinkingIcon => {
+                    comp.options
+                        .insert("thinking_icon".into(), serde_json::Value::String(icon_str));
+                    "Thinking icon"
                 }
                 IconPickerPurpose::OpusIcon => {
                     if let Some(pm) = comp.icon.per_model.as_mut() {

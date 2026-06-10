@@ -6,6 +6,8 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct ModelComponent {
     per_model: Option<PerModelIcons>,
+    show_effort: bool,
+    thinking_icon: String,
 }
 
 impl ModelComponent {
@@ -15,6 +17,16 @@ impl ModelComponent {
 
     pub fn with_per_model(mut self, per_model: Option<PerModelIcons>) -> Self {
         self.per_model = per_model;
+        self
+    }
+
+    pub fn with_effort(mut self, show_effort: bool) -> Self {
+        self.show_effort = show_effort;
+        self
+    }
+
+    pub fn with_thinking_icon(mut self, thinking_icon: String) -> Self {
+        self.thinking_icon = thinking_icon;
         self
     }
 
@@ -42,11 +54,44 @@ impl ModelComponent {
         out.push_str(rest);
         out
     }
+
+    fn effort_code(level: &str) -> Option<&'static str> {
+        match level {
+            "low" => Some("l"),
+            "medium" => Some("m"),
+            "high" => Some("h"),
+            "xhigh" => Some("H"),
+            "max" => Some("X"),
+            _ => None,
+        }
+    }
 }
 
 impl Component for ModelComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
         let display_name = Self::format_display_name(&input.model.display_name);
+        let effort_code = if self.show_effort {
+            input
+                .effort
+                .as_ref()
+                .and_then(|effort| effort.level.as_deref())
+                .and_then(Self::effort_code)
+                .unwrap_or_default()
+                .to_string()
+        } else {
+            String::new()
+        };
+        let thinking_icon = if input
+            .thinking
+            .as_ref()
+            .and_then(|thinking| thinking.enabled)
+            .unwrap_or(false)
+        {
+            self.thinking_icon.as_str()
+        } else {
+            ""
+        };
+        let secondary = format!("{}{}", effort_code, thinking_icon);
         let mut metadata = HashMap::new();
         metadata.insert("model_id".into(), input.model.id.clone());
         metadata.insert("display_name".into(), display_name.clone());
@@ -73,7 +118,7 @@ impl Component for ModelComponent {
 
         Some(ComponentData {
             primary: display_name,
-            secondary: String::new(),
+            secondary,
             metadata,
         })
     }
