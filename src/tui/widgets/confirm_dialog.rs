@@ -9,7 +9,7 @@ use ratatui::{
 pub fn render(f: &mut Frame, area: Rect, message: &str, hints: &[(&str, &str)]) {
     let msg_lines: Vec<&str> = message.lines().collect();
     let max_line = msg_lines.iter().map(|l| l.len()).max().unwrap_or(20);
-    let width = (max_line as u16 + 6).max(30).min(60);
+    let width = (max_line as u16 + 6).clamp(30, 60);
     let height = msg_lines.len() as u16 + 4; // border(2) + blank + hints
 
     let popup = centered_rect(width, height, area);
@@ -23,7 +23,12 @@ pub fn render(f: &mut Frame, area: Rect, message: &str, hints: &[(&str, &str)]) 
 
     let mut lines: Vec<Line> = msg_lines
         .iter()
-        .map(|l| Line::from(Span::styled(l.to_string(), Style::default().fg(Color::White))))
+        .map(|l| {
+            Line::from(Span::styled(
+                l.to_string(),
+                Style::default().fg(Color::White),
+            ))
+        })
         .collect();
     lines.push(super::key_hints::render(hints));
 

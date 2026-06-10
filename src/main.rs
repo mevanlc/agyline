@@ -35,7 +35,11 @@ fn main() {
         }
         match xline::config::manager::write_default_themes(&dir, true) {
             Ok(n) => {
-                eprintln!("xline: installed {} default theme(s) to {}", n, dir.display());
+                eprintln!(
+                    "xline: installed {} default theme(s) to {}",
+                    n,
+                    dir.display()
+                );
             }
             Err(e) => {
                 eprintln!("xline: error installing themes: {}", e);

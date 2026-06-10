@@ -1,0 +1,143 @@
+{
+  "cards": [
+    {
+      "slug": "default-steady",
+      "label": "Default",
+      "theme": "Default",
+      "sample": "steady",
+      "variant": "expanded",
+      "surface": "dark",
+      "artifacts": {
+        "ansi": "cards/default-steady.ansi",
+        "text": "cards/default-steady.txt",
+        "html": "cards/default-steady.html",
+        "png": "cards/default-steady.png",
+        "tmux": true
+      }
+    },
+    {
+      "slug": "cometix-steady",
+      "label": "Cometix",
+      "theme": "Cometix",
+      "sample": "steady",
+      "variant": "expanded",
+      "surface": "dark",
+      "artifacts": {
+        "ansi": "cards/cometix-steady.ansi",
+        "text": "cards/cometix-steady.txt",
+        "html": "cards/cometix-steady.html",
+        "png": "cards/cometix-steady.png",
+        "tmux": true
+      }
+    },
+    {
+      "slug": "gruvbox-heavy",
+      "label": "Gruvbox",
+      "theme": "Gruvbox",
+      "sample": "heavy",
+      "variant": "expanded",
+      "surface": "dark",
+      "artifacts": {
+        "ansi": "cards/gruvbox-heavy.ansi",
+        "text": "cards/gruvbox-heavy.txt",
+        "html": "cards/gruvbox-heavy.html",
+        "png": "cards/gruvbox-heavy.png",
+        "tmux": true
+      }
+    },
+    {
+      "slug": "nord-steady",
+      "label": "Nord",
+      "theme": "Nord",
+      "sample": "steady",
+      "variant": "expanded",
+      "surface": "dark",
+      "artifacts": {
+        "ansi": "cards/nord-steady.ansi",
+        "text": "cards/nord-steady.txt",
+        "html": "cards/nord-steady.html",
+        "png": "cards/nord-steady.png",
+        "tmux": true
+      }
+    },
+    {
+      "slug": "rose-pine-heavy",
+      "label": "Rose Pine",
+      "theme": "Rose Pine",
+      "sample": "heavy",
+      "variant": "expanded",
+      "surface": "dark",
+      "artifacts": {
+        "ansi": "cards/rose-pine-heavy.ansi",
+        "text": "cards/rose-pine-heavy.txt",
+        "html": "cards/rose-pine-heavy.html",
+        "png": "cards/rose-pine-heavy.png",
+        "tmux": true
+      }
+    },
+    {
+      "slug": "tokyo-night-steady",
+      "label": "Tokyo Night",
+      "theme": "Tokyo Night",
+      "sample": "steady",
+      "variant": "expanded",
+      "surface": "dark",
+      "artifacts": {
+        "ansi": "cards/tokyo-night-steady.ansi",
+        "text": "cards/tokyo-night-steady.txt",
+        "html": "cards/tokyo-night-steady.html",
+        "png": "cards/tokyo-night-steady.png",
+        "tmux": true
+      }
+    },
+    {
+      "slug": "powerline-dark-heavy",
+      "label": "Powerline Dark",
+      "theme": "Powerline Dark",
+      "sample": "heavy",
+      "variant": "expanded",
+      "surface": "dark",
+      "artifacts": {
+        "ansi": "cards/powerline-dark-heavy.ansi",
+        "text": "cards/powerline-dark-heavy.txt",
+        "html": "cards/powerline-dark-heavy.html",
+        "png": "cards/powerline-dark-heavy.png",
+        "tmux": true
+      }
+    },
+    {
+      "slug": "powerline-light-steady",
+      "label": "Powerline Light",
+      "theme": "Powerline Light",
+      "sample": "steady",
+      "variant": "expanded",
+      "surface": "light",
+      "artifacts": {
+        "ansi": "cards/powerline-light-steady.ansi",
+        "text": "cards/powerline-light-steady.txt",
+        "html": "cards/powerline-light-steady.html",
+        "png": "cards/powerline-light-steady.png",
+        "tmux": true
+      }
+    },
+    {
+      "slug": "minimal-ascii",
+      "label": "Minimal ASCII",
+      "theme": "Minimal",
+      "sample": "speed",
+      "variant": "ascii",
+      "surface": "light",
+      "artifacts": {
+        "ansi": "cards/minimal-ascii.ansi",
+        "text": "cards/minimal-ascii.txt",
+        "html": "cards/minimal-ascii.html",
+        "png": "cards/minimal-ascii.png",
+        "tmux": true
+      }
+    }
+  ],
+  "gallery": {
+    "html": "gallery.html",
+    "png": "gallery.png"
+  }
+}

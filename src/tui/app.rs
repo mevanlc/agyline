@@ -807,12 +807,10 @@ impl App {
                                 self.is_dirty = false;
                             }
                             self.refresh_theme_list();
-                            self.status_message =
-                                Some(format!("Reinstalled {} default themes", n));
+                            self.status_message = Some(format!("Reinstalled {} default themes", n));
                         }
                         Err(e) => {
-                            self.status_message =
-                                Some(format!("Reinstall error: {}", e));
+                            self.status_message = Some(format!("Reinstall error: {}", e));
                         }
                     }
                 }
@@ -1330,7 +1328,9 @@ impl App {
             }
             KeyCode::Char(c) => {
                 if is_custom {
-                    let byte_pos = self.icon_picker.custom_buffer
+                    let byte_pos = self
+                        .icon_picker
+                        .custom_buffer
                         .char_indices()
                         .nth(self.icon_picker.custom_cursor)
                         .map(|(i, _)| i)
@@ -1338,7 +1338,9 @@ impl App {
                     self.icon_picker.custom_buffer.insert(byte_pos, c);
                     self.icon_picker.custom_cursor += 1;
                 } else {
-                    let byte_pos = self.icon_picker.search_query
+                    let byte_pos = self
+                        .icon_picker
+                        .search_query
                         .char_indices()
                         .nth(self.icon_picker.search_cursor)
                         .map(|(i, _)| i)
@@ -1352,7 +1354,9 @@ impl App {
             KeyCode::Backspace => {
                 if is_custom {
                     if self.icon_picker.custom_cursor > 0 {
-                        let byte_pos = self.icon_picker.custom_buffer
+                        let byte_pos = self
+                            .icon_picker
+                            .custom_buffer
                             .char_indices()
                             .nth(self.icon_picker.custom_cursor - 1)
                             .map(|(i, _)| i)
@@ -1360,18 +1364,18 @@ impl App {
                         self.icon_picker.custom_buffer.remove(byte_pos);
                         self.icon_picker.custom_cursor -= 1;
                     }
-                } else {
-                    if self.icon_picker.search_cursor > 0 {
-                        let byte_pos = self.icon_picker.search_query
-                            .char_indices()
-                            .nth(self.icon_picker.search_cursor - 1)
-                            .map(|(i, _)| i)
-                            .unwrap_or(0);
-                        self.icon_picker.search_query.remove(byte_pos);
-                        self.icon_picker.search_cursor -= 1;
-                        self.icon_picker.selected_index = 0;
-                        self.icon_picker.scroll_offset = 0;
-                    }
+                } else if self.icon_picker.search_cursor > 0 {
+                    let byte_pos = self
+                        .icon_picker
+                        .search_query
+                        .char_indices()
+                        .nth(self.icon_picker.search_cursor - 1)
+                        .map(|(i, _)| i)
+                        .unwrap_or(0);
+                    self.icon_picker.search_query.remove(byte_pos);
+                    self.icon_picker.search_cursor -= 1;
+                    self.icon_picker.selected_index = 0;
+                    self.icon_picker.scroll_offset = 0;
                 }
             }
             _ => {}
