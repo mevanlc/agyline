@@ -55,7 +55,11 @@ impl Component for ModelComponent {
             && pm.enabled
         {
             let model_id = input.model.id.to_ascii_lowercase();
-            let icon = if model_id.contains("opus") {
+            let icon = if model_id.contains("mythos") {
+                &pm.mythos
+            } else if model_id.contains("fable") {
+                &pm.fable
+            } else if model_id.contains("opus") {
                 &pm.opus
             } else if model_id.contains("haiku") {
                 &pm.haiku

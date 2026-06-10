@@ -141,6 +141,8 @@ pub enum IconPickerPurpose {
     OpusIcon,
     SonnetIcon,
     HaikuIcon,
+    FableIcon,
+    MythosIcon,
 }
 
 #[derive(Debug, Clone)]
@@ -472,9 +474,11 @@ impl App {
                             let pm = comp.icon.per_model.get_or_insert_with(|| {
                                 crate::config::types::PerModelIcons {
                                     enabled: false,
-                                    opus: "\u{1f419}".into(),   // 🐙
-                                    sonnet: "\u{1f3b6}".into(), // 🎶
-                                    haiku: "\u{1f338}".into(),  // 🌸
+                                    opus: "\u{1f419}".into(),           // 🐙
+                                    sonnet: "\u{1f3b6}".into(),         // 🎶
+                                    haiku: "\u{1f338}".into(),          // 🌸
+                                    fable: "\u{1f52e}".into(),          // 🔮
+                                    mythos: "\u{1f6e1}\u{fe0f}".into(), // 🛡️
                                 }
                             });
                             pm.enabled = !pm.enabled;
@@ -496,6 +500,12 @@ impl App {
                         }
                         FieldSelection::SonnetIcon => {
                             self.open_icon_picker(IconPickerPurpose::SonnetIcon);
+                        }
+                        FieldSelection::FableIcon => {
+                            self.open_icon_picker(IconPickerPurpose::FableIcon);
+                        }
+                        FieldSelection::MythosIcon => {
+                            self.open_icon_picker(IconPickerPurpose::MythosIcon);
                         }
                         FieldSelection::HaikuIcon => {
                             self.open_icon_picker(IconPickerPurpose::HaikuIcon);
@@ -1218,6 +1228,16 @@ impl App {
                     .per_model
                     .as_ref()
                     .map_or(String::new(), |p| p.haiku.clone()),
+                IconPickerPurpose::FableIcon => comp
+                    .icon
+                    .per_model
+                    .as_ref()
+                    .map_or(String::new(), |p| p.fable.clone()),
+                IconPickerPurpose::MythosIcon => comp
+                    .icon
+                    .per_model
+                    .as_ref()
+                    .map_or(String::new(), |p| p.mythos.clone()),
             }
         } else {
             String::new()
@@ -1463,6 +1483,18 @@ impl App {
                         pm.haiku = icon_str;
                     }
                     "Haiku icon"
+                }
+                IconPickerPurpose::FableIcon => {
+                    if let Some(pm) = comp.icon.per_model.as_mut() {
+                        pm.fable = icon_str;
+                    }
+                    "Fable icon"
+                }
+                IconPickerPurpose::MythosIcon => {
+                    if let Some(pm) = comp.icon.per_model.as_mut() {
+                        pm.mythos = icon_str;
+                    }
+                    "Mythos icon"
                 }
             };
             self.status_message = Some(format!("{} updated", label));

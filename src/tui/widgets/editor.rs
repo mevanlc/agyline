@@ -19,6 +19,8 @@ pub enum FieldSelection {
     OpusIcon,
     SonnetIcon,
     HaikuIcon,
+    FableIcon,
+    MythosIcon,
     IconColor,
     TextColor,
     BackgroundColor,
@@ -35,6 +37,8 @@ impl FieldSelection {
             if pm_enabled {
                 fields.push(Self::PerModelIcons);
                 fields.push(Self::OpusIcon);
+                fields.push(Self::FableIcon);
+                fields.push(Self::MythosIcon);
                 fields.push(Self::SonnetIcon);
                 fields.push(Self::HaikuIcon);
             } else {
@@ -116,6 +120,16 @@ impl EditorWidget {
                 FieldSelection::OpusIcon => (
                     "Opus Icon",
                     pm.map_or(String::new(), |p| p.opus.clone()),
+                    None,
+                ),
+                FieldSelection::FableIcon => (
+                    "Fable Icon",
+                    pm.map_or(String::new(), |p| p.fable.clone()),
+                    None,
+                ),
+                FieldSelection::MythosIcon => (
+                    "Mythos Icon",
+                    pm.map_or(String::new(), |p| p.mythos.clone()),
                     None,
                 ),
                 FieldSelection::SonnetIcon => (

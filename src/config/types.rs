@@ -118,12 +118,20 @@ impl Default for StyleConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PerModelIcons {
+    #[serde(default)]
     pub enabled: bool,
+    #[serde(default)]
     pub opus: String,
+    #[serde(default)]
     pub sonnet: String,
+    #[serde(default)]
     pub haiku: String,
+    #[serde(default)]
+    pub fable: String,
+    #[serde(default)]
+    pub mythos: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
