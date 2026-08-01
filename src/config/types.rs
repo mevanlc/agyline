@@ -2,11 +2,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 
+pub const DEFAULT_HOSTNAME_RSTRIP: &str = ".local,.localhost,.lan";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ComponentId {
     Model,
     Directory,
+    Hostname,
     Git,
     ContextWindow,
     Usage,
@@ -21,6 +24,7 @@ impl ComponentId {
     pub const ALL: &[ComponentId] = &[
         ComponentId::Model,
         ComponentId::Directory,
+        ComponentId::Hostname,
         ComponentId::Git,
         ComponentId::ContextWindow,
         ComponentId::Usage,
@@ -34,6 +38,7 @@ impl ComponentId {
         match self {
             ComponentId::Model => "Model",
             ComponentId::Directory => "Directory",
+            ComponentId::Hostname => "Hostname",
             ComponentId::Git => "Git",
             ComponentId::ContextWindow => "Context Window",
             ComponentId::Usage => "Usage",
@@ -48,6 +53,7 @@ impl ComponentId {
         match self {
             ComponentId::Model => "Active Claude model name",
             ComponentId::Directory => "Current working directory",
+            ComponentId::Hostname => "Current machine hostname",
             ComponentId::Git => "Branch and working tree status",
             ComponentId::ContextWindow => "Context window fill percentage",
             ComponentId::Usage => "API token count for this session",
@@ -62,6 +68,7 @@ impl ComponentId {
         match self {
             ComponentId::Model => "Model",
             ComponentId::Directory => "Directory",
+            ComponentId::Hostname => "Hostname",
             ComponentId::Git => "Git",
             ComponentId::ContextWindow => "Ctx Window",
             ComponentId::Usage => "Usage",

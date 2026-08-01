@@ -1,6 +1,6 @@
 use crate::config::manager;
 use crate::config::theme::UserTheme;
-use crate::config::types::{AnsiColor, ComponentId, StyleMode};
+use crate::config::types::{AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP, StyleMode};
 use crate::core::ring_cursor::RingCursor;
 use crate::data::icon_catalog::{IconCatalogData, IconPickerTab};
 use crossterm::event::{KeyCode, KeyModifiers};
@@ -66,6 +66,7 @@ pub struct App {
 pub enum NameInputPurpose {
     SaveAs,
     Rename,
+    HostnameRstrip,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -470,6 +471,17 @@ impl App {
                         FieldSelection::NerdFontIcon => {
                             self.open_icon_picker(IconPickerPurpose::NerdFontIcon);
                         }
+                        FieldSelection::HostnameRstrip => {
+                            let value = self.theme.components[self.selected_component]
+                                .options
+                                .get("rstrip")
+                                .and_then(|value| value.as_str())
+                                .unwrap_or(DEFAULT_HOSTNAME_RSTRIP)
+                                .to_owned();
+                            self.name_input_open = true;
+                            self.name_input_buffer = value;
+                            self.name_input_purpose = NameInputPurpose::HostnameRstrip;
+                        }
                         FieldSelection::PerModelIcons => {
                             let comp = &mut self.theme.components[self.selected_component];
                             let pm = comp.icon.per_model.get_or_insert_with(|| {
@@ -724,14 +736,28 @@ impl App {
         match code {
             KeyCode::Enter => {
                 self.name_input_open = false;
-                let name = self.name_input_buffer.trim().to_string();
-                if name.is_empty() || !manager::is_valid_theme_name(&name) {
-                    self.status_message = Some("Invalid theme name".into());
-                    return;
-                }
                 match self.name_input_purpose {
-                    NameInputPurpose::SaveAs => self.finish_save_as(&name),
-                    NameInputPurpose::Rename => self.finish_rename(&name),
+                    NameInputPurpose::SaveAs | NameInputPurpose::Rename => {
+                        let name = self.name_input_buffer.trim().to_string();
+                        if name.is_empty() || !manager::is_valid_theme_name(&name) {
+                            self.status_message = Some("Invalid theme name".into());
+                            return;
+                        }
+                        if self.name_input_purpose == NameInputPurpose::SaveAs {
+                            self.finish_save_as(&name);
+                        } else {
+                            self.finish_rename(&name);
+                        }
+                    }
+                    NameInputPurpose::HostnameRstrip => {
+                        let value = self.name_input_buffer.trim().to_owned();
+                        if let Some(comp) = self.theme.components.get_mut(self.selected_component) {
+                            comp.options
+                                .insert("rstrip".into(), serde_json::Value::String(value));
+                            self.status_message = Some("Hostname RStrip updated".into());
+                            self.mark_dirty();
+                        }
+                    }
                 }
             }
             KeyCode::Char(c) => self.name_input_buffer.push(c),
@@ -1636,6 +1662,7 @@ impl App {
             let title = match self.name_input_purpose {
                 NameInputPurpose::SaveAs => "Save As",
                 NameInputPurpose::Rename => "Rename",
+                NameInputPurpose::HostnameRstrip => "RStrip",
             };
             super::widgets::name_input::render(f, f.area(), title, &self.name_input_buffer);
         }

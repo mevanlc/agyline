@@ -1,5 +1,5 @@
 use crate::config::theme::UserTheme;
-use crate::config::types::{AnsiColor, ComponentId};
+use crate::config::types::{AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP};
 use crate::core::render;
 use ratatui::{
     Frame,
@@ -15,6 +15,7 @@ pub enum FieldSelection {
     StyleMode,
     PlainIcon,
     NerdFontIcon,
+    HostnameRstrip,
     PerModelIcons,
     EffortLevel,
     ThinkingIcon,
@@ -55,6 +56,9 @@ impl FieldSelection {
         } else {
             fields.push(Self::PlainIcon);
             fields.push(Self::NerdFontIcon);
+            if comp.id == ComponentId::Hostname {
+                fields.push(Self::HostnameRstrip);
+            }
         }
 
         fields.extend([
@@ -119,6 +123,15 @@ impl EditorWidget {
                 }
                 FieldSelection::PlainIcon => ("Plain Icon", comp.icon.plain.clone(), None),
                 FieldSelection::NerdFontIcon => ("Nerd Icon", comp.icon.nerd_font.clone(), None),
+                FieldSelection::HostnameRstrip => (
+                    "RStrip",
+                    comp.options
+                        .get("rstrip")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or(DEFAULT_HOSTNAME_RSTRIP)
+                        .into(),
+                    None,
+                ),
                 FieldSelection::PerModelIcons => {
                     let enabled = pm.is_some_and(|p| p.enabled);
                     ("Per-Model", if enabled { "Yes" } else { "No" }.into(), None)
@@ -313,4 +326,21 @@ fn format_color(color: Option<&AnsiColor>) -> String {
 
 fn swatch_color(color: Option<&AnsiColor>) -> Option<Color> {
     color.map(render::ansi_to_ratatui_color)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FieldSelection;
+    use crate::config::theme::UserTheme;
+    use crate::config::types::ComponentId;
+
+    #[test]
+    fn rstrip_is_only_available_for_hostname() {
+        let theme = UserTheme::default_theme();
+        let hostname = theme.get_component(ComponentId::Hostname).unwrap();
+        let directory = theme.get_component(ComponentId::Directory).unwrap();
+
+        assert!(FieldSelection::fields_for(hostname).contains(&FieldSelection::HostnameRstrip));
+        assert!(!FieldSelection::fields_for(directory).contains(&FieldSelection::HostnameRstrip));
+    }
 }

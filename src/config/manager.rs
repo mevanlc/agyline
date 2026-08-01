@@ -156,14 +156,16 @@ fn list_theme_files(dir: &Path) -> std::io::Result<Vec<(String, PathBuf)>> {
             themes.push((name.to_string(), path));
         }
     }
-    themes.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    themes.sort_by_key(|(name, _)| name.to_lowercase());
     Ok(themes)
 }
 
 /// Load a theme from a .toml file.
 pub fn load_theme(path: &Path) -> Result<UserTheme, LoadError> {
     let content = fs::read_to_string(path).map_err(LoadError::Io)?;
-    toml::from_str(&content).map_err(LoadError::Parse)
+    let mut theme: UserTheme = toml::from_str(&content).map_err(LoadError::Parse)?;
+    theme.add_missing_components();
+    Ok(theme)
 }
 
 /// Save a theme to a .toml file.

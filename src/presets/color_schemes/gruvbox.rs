@@ -28,6 +28,15 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
+                Hostname,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 109 }),
+                    text: Some(Color256 { c256: 109 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
                 Git,
                 ComponentColors {
                     icon: Some(Color256 { c256: 109 }),

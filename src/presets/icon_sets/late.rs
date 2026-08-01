@@ -21,6 +21,13 @@ pub fn icon_set() -> IconSet {
                 },
             ), // 📂 / 󰚝 md-folder_star
             (
+                Hostname,
+                ComponentIcons {
+                    plain: "\u{1f5a5}\u{fe0f}",
+                    nerd_font: "\u{f108}",
+                },
+            ), // 🖥️ /  fa-desktop
+            (
                 Git,
                 ComponentIcons {
                     plain: "\u{1f500}",

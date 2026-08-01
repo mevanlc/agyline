@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::types::{
-    AnsiColor, ColorConfig, ComponentConfig, ComponentId, IconConfig, StyleConfig, StyleMode,
-    TextStyleConfig,
+    AnsiColor, ColorConfig, ComponentConfig, ComponentId, DEFAULT_HOSTNAME_RSTRIP, IconConfig,
+    StyleConfig, StyleMode, TextStyleConfig,
 };
 
 /// A complete user theme — settings + colors + icons for all components.
@@ -57,6 +57,25 @@ impl UserTheme {
                 },
                 styles: TextStyleConfig { text_bold: false },
                 options: Default::default(),
+            },
+            ComponentConfig {
+                id: Hostname,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f5a5}\u{fe0f}".into(), // 🖥️
+                    nerd_font: "\u{f108}".into(),
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 12 }),
+                    text: Some(AnsiColor::Color16 { c16: 12 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: std::collections::HashMap::from([(
+                    "rstrip".into(),
+                    serde_json::Value::String(DEFAULT_HOSTNAME_RSTRIP.into()),
+                )]),
             },
             ComponentConfig {
                 id: Git,
@@ -191,6 +210,24 @@ impl UserTheme {
         self.components.iter_mut().find(|c| c.id == id)
     }
 
+    /// Add components introduced after this theme was saved, preserving the
+    /// theme's existing component order and placing additions in default order.
+    pub fn add_missing_components(&mut self) {
+        let defaults = Self::default_theme().components;
+
+        for (index, default) in defaults.iter().enumerate() {
+            if self.get_component(default.id).is_some() {
+                continue;
+            }
+
+            let insert_at = defaults[index + 1..]
+                .iter()
+                .find_map(|next| self.components.iter().position(|c| c.id == next.id))
+                .unwrap_or(self.components.len());
+            self.components.insert(insert_at, default.clone());
+        }
+    }
+
     /// Get the separator component.
     pub fn separator(&self) -> Option<&ComponentConfig> {
         self.get_component(ComponentId::Separator)
@@ -236,6 +273,29 @@ mod tests {
     }
 
     #[test]
+    fn test_add_missing_components_uses_default_order() {
+        let mut theme = UserTheme::default_theme();
+        theme.components.retain(|c| c.id != ComponentId::Hostname);
+
+        theme.add_missing_components();
+
+        let directory = theme
+            .components
+            .iter()
+            .position(|c| c.id == ComponentId::Directory)
+            .unwrap();
+        assert_eq!(theme.components[directory + 1].id, ComponentId::Hostname);
+        assert!(!theme.components[directory + 1].enabled);
+        assert_eq!(
+            theme.components[directory + 1]
+                .options
+                .get("rstrip")
+                .and_then(|value| value.as_str()),
+            Some(DEFAULT_HOSTNAME_RSTRIP)
+        );
+    }
+
+    #[test]
     fn test_roundtrip_toml() {
         let theme = UserTheme::default_theme();
         let toml_str = toml::to_string_pretty(&theme).unwrap();
@@ -252,6 +312,7 @@ mod tests {
             assert_eq!(a.colors.text, b.colors.text);
             assert_eq!(a.colors.background, b.colors.background);
             assert_eq!(a.styles.text_bold, b.styles.text_bold);
+            assert_eq!(a.options, b.options);
         }
     }
 }

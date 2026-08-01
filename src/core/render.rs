@@ -233,6 +233,7 @@ pub fn demo_texts_full() -> HashMap<ComponentId, SegmentText> {
     HashMap::from([
         (ComponentId::Model, ("Sonnet 4.5".into(), String::new())),
         (ComponentId::Directory, ("project".into(), String::new())),
+        (ComponentId::Hostname, ("workstation".into(), String::new())),
         (ComponentId::Git, ("main \u{2713}".into(), String::new())),
         (
             ComponentId::ContextWindow,
@@ -250,6 +251,7 @@ pub fn demo_texts_compact() -> HashMap<ComponentId, SegmentText> {
     HashMap::from([
         (ComponentId::Model, ("Model".into(), String::new())),
         (ComponentId::Directory, ("prj".into(), String::new())),
+        (ComponentId::Hostname, ("host".into(), String::new())),
         (ComponentId::Git, ("main \u{2713}".into(), String::new())),
         (ComponentId::ContextWindow, ("12%".into(), String::new())),
         (ComponentId::Usage, ("45%".into(), String::new())),

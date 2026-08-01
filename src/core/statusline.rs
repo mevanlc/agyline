@@ -1,5 +1,5 @@
 use crate::config::theme::UserTheme;
-use crate::config::types::{ComponentConfig, ComponentId};
+use crate::config::types::{ComponentConfig, ComponentId, DEFAULT_HOSTNAME_RSTRIP};
 use crate::core::components::ComponentData;
 use crate::core::render;
 
@@ -67,6 +67,14 @@ pub fn collect_all_components(
                     .collect(input)
             }
             ComponentId::Directory => DirectoryComponent::new().collect(input),
+            ComponentId::Hostname => {
+                let rstrip = comp_cfg
+                    .options
+                    .get("rstrip")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or(DEFAULT_HOSTNAME_RSTRIP);
+                HostnameComponent::new().with_rstrip(rstrip).collect(input)
+            }
             ComponentId::Git => {
                 let show_sha = comp_cfg
                     .options

@@ -50,6 +50,19 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
+                Hostname,
+                ComponentColors {
+                    icon: light(),
+                    text: light(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 55,
+                        g: 65,
+                        b: 81,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
                 Git,
                 ComponentColors {
                     icon: white(),

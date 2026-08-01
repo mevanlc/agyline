@@ -5,7 +5,8 @@
 - keyboard-driven TUI editor built with `ratatui`
 - starter themes written automatically on first run
 - plain, Nerd Font, emoji, and powerline-style rendering
-- configurable components for model, directory, git, usage, cost, session, and output style
+- configurable components for model, directory, hostname, git, usage, cost, session, and output style
+- configurable comma-separated suffix stripping for displayed hostnames
 
 ## Build and Install
 ```bash
