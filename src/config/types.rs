@@ -12,7 +12,10 @@ pub enum ComponentId {
     Hostname,
     Git,
     ContextWindow,
-    Usage,
+    #[serde(rename = "usage_5h")]
+    UsageFiveHour,
+    #[serde(rename = "usage_7d")]
+    UsageSevenDay,
     Cost,
     Session,
     OutputStyle,
@@ -27,7 +30,8 @@ impl ComponentId {
         ComponentId::Hostname,
         ComponentId::Git,
         ComponentId::ContextWindow,
-        ComponentId::Usage,
+        ComponentId::UsageFiveHour,
+        ComponentId::UsageSevenDay,
         ComponentId::Cost,
         ComponentId::Session,
         ComponentId::OutputStyle,
@@ -41,7 +45,8 @@ impl ComponentId {
             ComponentId::Hostname => "Hostname",
             ComponentId::Git => "Git",
             ComponentId::ContextWindow => "Context Window",
-            ComponentId::Usage => "Usage",
+            ComponentId::UsageFiveHour => "Usage (5h)",
+            ComponentId::UsageSevenDay => "Usage (7d)",
             ComponentId::Cost => "Cost",
             ComponentId::Session => "Session",
             ComponentId::OutputStyle => "Output Style",
@@ -56,7 +61,8 @@ impl ComponentId {
             ComponentId::Hostname => "Current machine hostname",
             ComponentId::Git => "Branch and working tree status",
             ComponentId::ContextWindow => "Context window fill percentage",
-            ComponentId::Usage => "Five-hour and seven-day rate-limit usage",
+            ComponentId::UsageFiveHour => "Five-hour rate-limit usage",
+            ComponentId::UsageSevenDay => "Seven-day rate-limit usage",
             ComponentId::Cost => "Estimated API cost for this session",
             ComponentId::Session => "Elapsed time in current session",
             ComponentId::OutputStyle => "Response verbosity mode",
@@ -71,7 +77,8 @@ impl ComponentId {
             ComponentId::Hostname => "Hostname",
             ComponentId::Git => "Git",
             ComponentId::ContextWindow => "Ctx Window",
-            ComponentId::Usage => "Usage",
+            ComponentId::UsageFiveHour => "Usage (5h)",
+            ComponentId::UsageSevenDay => "Usage (7d)",
             ComponentId::Cost => "Cost",
             ComponentId::Session => "Session",
             ComponentId::OutputStyle => "Output",
@@ -215,4 +222,23 @@ pub struct ComponentConfig {
     pub styles: TextStyleConfig,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub options: HashMap<String, serde_json::Value>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ComponentId;
+
+    #[test]
+    fn usage_components_have_distinct_labels_and_config_ids() {
+        assert_eq!(ComponentId::UsageFiveHour.display_name(), "Usage (5h)");
+        assert_eq!(ComponentId::UsageSevenDay.display_name(), "Usage (7d)");
+        assert_eq!(
+            serde_json::to_string(&ComponentId::UsageFiveHour).unwrap(),
+            "\"usage_5h\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ComponentId::UsageSevenDay).unwrap(),
+            "\"usage_7d\""
+        );
+    }
 }

@@ -42,7 +42,14 @@ pub fn icon_set() -> IconSet {
                 },
             ), // 🔮 / 󰦖 md-progress_clock
             (
-                Usage,
+                UsageFiveHour,
+                ComponentIcons {
+                    plain: "\u{1f4c8}",
+                    nerd_font: "\u{f0430}",
+                },
+            ), // 📈 / 󰐰 md-pulse
+            (
+                UsageSevenDay,
                 ComponentIcons {
                     plain: "\u{1f4c8}",
                     nerd_font: "\u{f0430}",

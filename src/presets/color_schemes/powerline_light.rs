@@ -83,7 +83,20 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
-                Usage,
+                UsageFiveHour,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 40,
+                        g: 167,
+                        b: 69,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                UsageSevenDay,
                 ComponentColors {
                     icon: white(),
                     text: white(),

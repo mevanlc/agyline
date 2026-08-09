@@ -84,7 +84,8 @@ pub fn collect_all_components(
                 GitComponent::new().with_sha(show_sha).collect(input)
             }
             ComponentId::ContextWindow => ContextWindowComponent::new().collect(input),
-            ComponentId::Usage => UsageComponent::new().collect(input),
+            ComponentId::UsageFiveHour => FiveHourUsageComponent::new().collect(input),
+            ComponentId::UsageSevenDay => SevenDayUsageComponent::new().collect(input),
             ComponentId::Cost => CostComponent::new().collect(input),
             ComponentId::Session => SessionComponent::new().collect(input),
             ComponentId::OutputStyle => OutputStyleComponent::new().collect(input),

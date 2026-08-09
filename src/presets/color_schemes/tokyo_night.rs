@@ -114,7 +114,28 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
-                Usage,
+                UsageFiveHour,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 224,
+                        g: 175,
+                        b: 104,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 224,
+                        g: 175,
+                        b: 104,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 36,
+                        g: 40,
+                        b: 59,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                UsageSevenDay,
                 ComponentColors {
                     icon: Some(AnsiColor::Rgb {
                         r: 224,

@@ -55,7 +55,16 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
-                Usage,
+                UsageFiveHour,
+                ComponentColors {
+                    icon: Some(Color16 { c16: 14 }),
+                    text: Some(Color16 { c16: 14 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                UsageSevenDay,
                 ComponentColors {
                     icon: Some(Color16 { c16: 14 }),
                     text: Some(Color16 { c16: 14 }),

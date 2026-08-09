@@ -41,4 +41,4 @@ pub use hostname::HostnameComponent;
 pub use model::ModelComponent;
 pub use output_style::OutputStyleComponent;
 pub use session::SessionComponent;
-pub use usage::UsageComponent;
+pub use usage::{FiveHourUsageComponent, SevenDayUsageComponent};

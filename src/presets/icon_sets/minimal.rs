@@ -42,7 +42,14 @@ pub fn icon_set() -> IconSet {
                 },
             ), // ◐
             (
-                Usage,
+                UsageFiveHour,
+                ComponentIcons {
+                    plain: "\u{1f4ca}",
+                    nerd_font: "\u{f0a9e}",
+                },
+            ), // 📊
+            (
+                UsageSevenDay,
                 ComponentIcons {
                     plain: "\u{1f4ca}",
                     nerd_font: "\u{f0a9e}",

@@ -89,7 +89,20 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
-                Usage,
+                UsageFiveHour,
+                ComponentColors {
+                    icon: light(),
+                    text: light(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 45,
+                        g: 50,
+                        b: 59,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                UsageSevenDay,
                 ComponentColors {
                     icon: light(),
                     text: light(),

@@ -110,7 +110,23 @@ impl UserTheme {
                 options: Default::default(),
             },
             ComponentConfig {
-                id: Usage,
+                id: UsageFiveHour,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f4ca}".into(), // 📊
+                    nerd_font: "\u{f080}".into(),
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 13 }),
+                    text: Some(AnsiColor::Color16 { c16: 13 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: UsageSevenDay,
                 enabled: false,
                 icon: IconConfig {
                     per_model: None,
@@ -270,6 +286,17 @@ mod tests {
     fn test_default_theme_is_active() {
         let theme = UserTheme::default_theme();
         assert!(theme.active);
+    }
+
+    #[test]
+    fn test_rate_limit_components_are_independent_and_disabled_by_default() {
+        let theme = UserTheme::default_theme();
+        let five_hour = theme.get_component(ComponentId::UsageFiveHour).unwrap();
+        let seven_day = theme.get_component(ComponentId::UsageSevenDay).unwrap();
+
+        assert!(!five_hour.enabled);
+        assert!(!seven_day.enabled);
+        assert_ne!(five_hour.id, seven_day.id);
     }
 
     #[test]
