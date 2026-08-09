@@ -1,1 +1,1 @@
- Opus 4.1 | 󰉋 reply-benchmark-pack | 󰊢 feature/showcase-cards ● 12741c8 |  18.6% · 186.4k tokens |  $12.84 | 󱦻 1h10m +428 -97 | 󱋵 detailed
+ Opus 4.1 | 󰉋 reply-benchmark-pack | 󰊢 feature/showcase-cards ● ba6cf7c |  17% · 186.4k tokens |  $12.84 | 󱦻 1h10m +428 -97 | 󱋵 detailed

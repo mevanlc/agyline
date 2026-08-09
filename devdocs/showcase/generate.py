@@ -19,7 +19,7 @@ import tomlkit
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "aidocs" / "showcase" / "out"
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "devdocs" / "showcase" / "out"
 DEFAULT_BINARY = REPO_ROOT / "target" / "debug" / "xline"
 
 
@@ -40,6 +40,8 @@ class SampleSpec:
     input_tokens: int
     output_tokens: int
     cache_read_tokens: int
+    five_hour_usage: float
+    seven_day_usage: float
 
 
 @dataclass(frozen=True)
@@ -69,6 +71,8 @@ SAMPLES: dict[str, SampleSpec] = {
         input_tokens=12_000,
         output_tokens=4_000,
         cache_read_tokens=8_000,
+        five_hour_usage=23.5,
+        seven_day_usage=41.2,
     ),
     "heavy": SampleSpec(
         slug="heavy",
@@ -86,6 +90,8 @@ SAMPLES: dict[str, SampleSpec] = {
         input_tokens=70_000,
         output_tokens=16_400,
         cache_read_tokens=100_000,
+        five_hour_usage=72.0,
+        seven_day_usage=68.4,
     ),
     "speed": SampleSpec(
         slug="speed",
@@ -103,6 +109,8 @@ SAMPLES: dict[str, SampleSpec] = {
         input_tokens=2_600,
         output_tokens=600,
         cache_read_tokens=1_000,
+        five_hour_usage=8.0,
+        seven_day_usage=15.0,
     ),
 }
 
@@ -181,16 +189,7 @@ def build_binary(binary_path: Path) -> None:
         raise RuntimeError(f"expected built binary at {binary_path}")
 
 
-def sample_usage(sample: SampleSpec) -> dict[str, int]:
-    return {
-        "input_tokens": sample.input_tokens,
-        "output_tokens": sample.output_tokens,
-        "cache_read_input_tokens": sample.cache_read_tokens,
-        "total_tokens": sample.input_tokens + sample.output_tokens + sample.cache_read_tokens,
-    }
-
-
-def create_repo(repo_root: Path, transcript_root: Path, sample: SampleSpec) -> tuple[Path, Path]:
+def create_repo(repo_root: Path, sample: SampleSpec) -> Path:
     repo_dir = repo_root / sample.repo_name
     repo_dir.mkdir(parents=True, exist_ok=True)
 
@@ -215,7 +214,10 @@ def create_repo(repo_root: Path, transcript_root: Path, sample: SampleSpec) -> t
         encoding="utf-8",
     )
     run(["git", "add", "."], cwd=repo_dir)
-    run(["git", "commit", "-m", "Initial fixture"], cwd=repo_dir)
+    git_env = os.environ.copy()
+    git_env["GIT_AUTHOR_DATE"] = "2000-01-01T00:00:00Z"
+    git_env["GIT_COMMITTER_DATE"] = "2000-01-01T00:00:00Z"
+    run(["git", "commit", "-m", "Initial fixture"], cwd=repo_dir, env=git_env)
 
     if sample.dirty:
         (src_dir / "main.rs").write_text(
@@ -229,20 +231,14 @@ def create_repo(repo_root: Path, transcript_root: Path, sample: SampleSpec) -> t
             encoding="utf-8",
         )
 
-    transcript_root.mkdir(parents=True, exist_ok=True)
-    transcript_path = transcript_root / f"{sample.slug}.jsonl"
-    transcript_entry = {
-        "type": "assistant",
-        "message": {
-            "usage": sample_usage(sample),
-        },
-    }
-    transcript_path.write_text(json.dumps(transcript_entry) + "\n", encoding="utf-8")
-
-    return repo_dir, transcript_path
+    return repo_dir
 
 
-def input_payload(sample: SampleSpec, repo_dir: Path, transcript_path: Path) -> dict[str, Any]:
+def input_payload(sample: SampleSpec, repo_dir: Path) -> dict[str, Any]:
+    context_window_size = 1_000_000 if "1m" in sample.model_id else 200_000
+    total_input_tokens = sample.input_tokens + sample.cache_read_tokens
+    used_percentage = total_input_tokens / context_window_size * 100
+
     return {
         "model": {
             "id": sample.model_id,
@@ -251,7 +247,29 @@ def input_payload(sample: SampleSpec, repo_dir: Path, transcript_path: Path) -> 
         "workspace": {
             "current_dir": str(repo_dir),
         },
-        "transcript_path": str(transcript_path),
+        "context_window": {
+            "total_input_tokens": total_input_tokens,
+            "total_output_tokens": sample.output_tokens,
+            "context_window_size": context_window_size,
+            "used_percentage": used_percentage,
+            "remaining_percentage": 100 - used_percentage,
+            "current_usage": {
+                "input_tokens": sample.input_tokens,
+                "output_tokens": sample.output_tokens,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": sample.cache_read_tokens,
+            },
+        },
+        "rate_limits": {
+            "five_hour": {
+                "used_percentage": sample.five_hour_usage,
+                "resets_at": 2_000_000_000,
+            },
+            "seven_day": {
+                "used_percentage": sample.seven_day_usage,
+                "resets_at": 2_000_086_400,
+            },
+        },
         "cost": {
             "total_cost_usd": sample.cost_usd,
             "total_duration_ms": sample.duration_ms,
@@ -268,7 +286,7 @@ def input_payload(sample: SampleSpec, repo_dir: Path, transcript_path: Path) -> 
 def write_default_themes(binary_path: Path, home_dir: Path) -> Path:
     env = os.environ.copy()
     env["HOME"] = str(home_dir)
-    run([str(binary_path), "--write-default-themes", "--force"], env=env)
+    run([str(binary_path), "--install-themes"], env=env)
     themes_dir = home_dir / ".claude" / "xline" / "themes"
     if not themes_dir.exists():
         raise RuntimeError(f"themes directory was not created at {themes_dir}")
@@ -616,17 +634,15 @@ def generate(args: argparse.Namespace) -> None:
         home_dir = Path(temp_home_root)
         work_root = Path(temp_work_root)
         themes_dir = write_default_themes(binary_path, home_dir)
-        transcript_root = work_root / "transcripts"
-
-        sample_state: dict[str, tuple[Path, Path]] = {}
+        sample_state: dict[str, Path] = {}
         for sample in SAMPLES.values():
-            sample_state[sample.slug] = create_repo(work_root, transcript_root, sample)
+            sample_state[sample.slug] = create_repo(work_root, sample)
 
         for showcase in selected_showcases(args.only):
             activate_theme(themes_dir, showcase.theme, showcase.variant)
             sample = SAMPLES[showcase.sample]
-            repo_dir, transcript_path = sample_state[sample.slug]
-            payload = input_payload(sample, repo_dir, transcript_path)
+            repo_dir = sample_state[sample.slug]
+            payload = input_payload(sample, repo_dir)
             ansi_text = render_statusline(binary_path, home_dir, payload)
             plain_text = strip_ansi(ansi_text)
             rendered_html = render_html_fragment(ansi_text, dark_background=showcase.surface == "dark")
@@ -638,7 +654,7 @@ def generate(args: argparse.Namespace) -> None:
             png_path = cards_dir / f"{showcase.slug}.png"
 
             ansi_path.write_text(ansi_text, encoding="utf-8")
-            text_path.write_text(plain_text + "\n", encoding="utf-8")
+            text_path.write_text(plain_text.rstrip() + "\n", encoding="utf-8")
             html_path.write_text(html_card(showcase, rendered_html), encoding="utf-8")
 
             png_written = False

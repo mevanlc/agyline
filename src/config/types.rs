@@ -56,7 +56,7 @@ impl ComponentId {
             ComponentId::Hostname => "Current machine hostname",
             ComponentId::Git => "Branch and working tree status",
             ComponentId::ContextWindow => "Context window fill percentage",
-            ComponentId::Usage => "API token count for this session",
+            ComponentId::Usage => "Five-hour and seven-day rate-limit usage",
             ComponentId::Cost => "Estimated API cost for this session",
             ComponentId::Session => "Elapsed time in current session",
             ComponentId::OutputStyle => "Response verbosity mode",

@@ -77,7 +77,8 @@ mod tests {
             },
             effort: None,
             thinking: None,
-            transcript_path: String::new(),
+            context_window: None,
+            rate_limits: None,
             cost: None,
             output_style: None,
         }

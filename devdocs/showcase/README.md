@@ -25,12 +25,12 @@ The generator:
 From the repo root:
 
 ```bash
-cd aidocs/showcase
+cd devdocs/showcase
 uv sync
 uv run python generate.py
 ```
 
-Artifacts are written to `aidocs/showcase/out/`.
+Artifacts are written to `devdocs/showcase/out/`.
 
 Useful flags:
 

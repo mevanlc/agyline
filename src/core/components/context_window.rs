@@ -1,12 +1,7 @@
 use super::{Component, ComponentData};
 use crate::config::types::ComponentId;
-use crate::core::input::{InputData, TranscriptEntry};
+use crate::core::input::{ContextWindow, CurrentUsage, InputData};
 use std::collections::HashMap;
-use std::fs;
-use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
-
-const DEFAULT_CONTEXT_LIMIT: u32 = 200_000;
 
 #[derive(Default)]
 pub struct ContextWindowComponent;
@@ -16,57 +11,106 @@ impl ContextWindowComponent {
         Self
     }
 
-    fn get_context_limit(model_id: &str) -> u32 {
-        // Simple heuristic based on model ID patterns
-        if model_id.contains("1m") || model_id.contains("1000k") {
-            1_000_000
+    fn format_percentage(percentage: f64) -> String {
+        if percentage.fract() == 0.0 {
+            format!("{percentage:.0}%")
         } else {
-            DEFAULT_CONTEXT_LIMIT
+            format!("{percentage:.1}%")
         }
+    }
+
+    fn format_tokens(tokens: u64) -> String {
+        if tokens >= 1000 {
+            let thousands = tokens as f64 / 1000.0;
+            if thousands.fract() == 0.0 {
+                format!("{thousands:.0}k")
+            } else {
+                format!("{thousands:.1}k")
+            }
+        } else {
+            tokens.to_string()
+        }
+    }
+
+    fn current_input_tokens(usage: &CurrentUsage) -> u64 {
+        usage.input_tokens.unwrap_or(0)
+            + usage.cache_creation_input_tokens.unwrap_or(0)
+            + usage.cache_read_input_tokens.unwrap_or(0)
+    }
+
+    fn input_tokens(context: &ContextWindow) -> Option<u64> {
+        context.total_input_tokens.or_else(|| {
+            context
+                .current_usage
+                .as_ref()
+                .map(Self::current_input_tokens)
+        })
+    }
+
+    fn total_tokens(context: &ContextWindow) -> Option<u64> {
+        match (context.total_input_tokens, context.total_output_tokens) {
+            (Some(input), Some(output)) => Some(input + output),
+            (Some(input), None) => Some(input),
+            (None, Some(output)) => Some(output),
+            (None, None) => context
+                .current_usage
+                .as_ref()
+                .map(|usage| Self::current_input_tokens(usage) + usage.output_tokens.unwrap_or(0)),
+        }
+    }
+
+    fn used_percentage(context: &ContextWindow) -> Option<f64> {
+        context
+            .used_percentage
+            .or_else(|| {
+                context
+                    .remaining_percentage
+                    .map(|remaining| 100.0 - remaining)
+            })
+            .or_else(|| {
+                let input_tokens = Self::input_tokens(context)?;
+                let limit = context.context_window_size.filter(|limit| *limit > 0)?;
+                Some(input_tokens as f64 / limit as f64 * 100.0)
+            })
     }
 }
 
 impl Component for ContextWindowComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
-        let context_limit = Self::get_context_limit(&input.model.id);
-        let tokens_opt = parse_transcript_usage(&input.transcript_path);
+        let context = input.context_window.as_ref();
+        let percentage = context.and_then(Self::used_percentage);
+        let tokens = context.and_then(Self::total_tokens);
 
-        let (pct_display, tok_display) = match tokens_opt {
-            Some(tokens) => {
-                let rate = (tokens as f64 / context_limit as f64) * 100.0;
-                let pct = if rate.fract() == 0.0 {
-                    format!("{:.0}%", rate)
-                } else {
-                    format!("{:.1}%", rate)
-                };
-                let tok = if tokens >= 1000 {
-                    let k = tokens as f64 / 1000.0;
-                    if k.fract() == 0.0 {
-                        format!("{}k", k as u32)
-                    } else {
-                        format!("{:.1}k", k)
-                    }
-                } else {
-                    tokens.to_string()
-                };
-                (pct, tok)
-            }
-            None => ("-".into(), "-".into()),
-        };
+        let percentage_display = percentage
+            .map(Self::format_percentage)
+            .unwrap_or_else(|| "-".into());
+        let tokens_display = tokens
+            .map(Self::format_tokens)
+            .unwrap_or_else(|| "-".into());
 
         let mut metadata = HashMap::new();
-        if let Some(tokens) = tokens_opt {
-            let rate = (tokens as f64 / context_limit as f64) * 100.0;
-            metadata.insert("tokens".into(), tokens.to_string());
-            metadata.insert("percentage".into(), rate.to_string());
-        } else {
-            metadata.insert("tokens".into(), "-".into());
-            metadata.insert("percentage".into(), "-".into());
-        }
-        metadata.insert("limit".into(), context_limit.to_string());
+        metadata.insert(
+            "percentage".into(),
+            percentage
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "-".into()),
+        );
+        metadata.insert(
+            "tokens".into(),
+            tokens
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "-".into()),
+        );
+        metadata.insert(
+            "limit".into(),
+            context
+                .and_then(|value| value.context_window_size)
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "-".into()),
+        );
 
         Some(ComponentData {
-            primary: format!("{} \u{b7} {} tokens", pct_display, tok_display),
+            primary: format!("{percentage_display} \u{b7} {tokens_display} tokens"),
             secondary: String::new(),
             metadata,
         })
@@ -77,148 +121,89 @@ impl Component for ContextWindowComponent {
     }
 }
 
-fn parse_transcript_usage(transcript_path: &str) -> Option<u32> {
-    let path = Path::new(transcript_path);
+#[cfg(test)]
+mod tests {
+    use super::{Component, ContextWindowComponent};
+    use crate::core::input::{ContextWindow, CurrentUsage, InputData, Model, Workspace};
 
-    if let Some(usage) = try_parse_transcript_file(path) {
-        return Some(usage);
-    }
-
-    if !path.exists()
-        && let Some(usage) = try_find_from_project_history(path)
-    {
-        return Some(usage);
-    }
-
-    None
-}
-
-fn try_parse_transcript_file(path: &Path) -> Option<u32> {
-    let file = fs::File::open(path).ok()?;
-    let reader = BufReader::new(file);
-    let lines: Vec<String> = reader
-        .lines()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap_or_default();
-
-    if lines.is_empty() {
-        return None;
-    }
-
-    // Check if last line is a summary
-    let last_line = lines.last()?.trim();
-    if let Ok(entry) = serde_json::from_str::<TranscriptEntry>(last_line)
-        && entry.r#type.as_deref() == Some("summary")
-        && let Some(leaf_uuid) = &entry.leaf_uuid
-    {
-        let project_dir = path.parent()?;
-        return find_usage_by_leaf_uuid(leaf_uuid, project_dir);
-    }
-
-    // Find last assistant message
-    for line in lines.iter().rev() {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        if let Ok(entry) = serde_json::from_str::<TranscriptEntry>(line)
-            && entry.r#type.as_deref() == Some("assistant")
-            && let Some(message) = &entry.message
-            && let Some(raw_usage) = &message.usage
-        {
-            return Some(raw_usage.clone().normalize().display_tokens());
+    fn input(context_window: Option<ContextWindow>) -> InputData {
+        InputData {
+            model: Model {
+                id: "claude-sonnet-4-5".into(),
+                display_name: "Sonnet 4.5".into(),
+            },
+            workspace: Workspace {
+                current_dir: "/tmp/project".into(),
+            },
+            effort: None,
+            thinking: None,
+            context_window,
+            rate_limits: None,
+            cost: None,
+            output_style: None,
         }
     }
 
-    None
-}
+    #[test]
+    fn uses_native_percentage_and_combined_token_totals() {
+        let data = ContextWindowComponent::new()
+            .collect(&input(Some(ContextWindow {
+                total_input_tokens: Some(20_000),
+                total_output_tokens: Some(4_000),
+                context_window_size: Some(200_000),
+                used_percentage: Some(10.0),
+                remaining_percentage: Some(90.0),
+                current_usage: None,
+            })))
+            .unwrap();
 
-fn find_usage_by_leaf_uuid(leaf_uuid: &str, project_dir: &Path) -> Option<u32> {
-    for entry in fs::read_dir(project_dir).ok()? {
-        let path = entry.ok()?.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("jsonl") {
-            continue;
-        }
-        if let Some(usage) = search_uuid_in_file(&path, leaf_uuid) {
-            return Some(usage);
-        }
-    }
-    None
-}
-
-fn search_uuid_in_file(path: &Path, target_uuid: &str) -> Option<u32> {
-    let file = fs::File::open(path).ok()?;
-    let reader = BufReader::new(file);
-    let lines: Vec<String> = reader
-        .lines()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap_or_default();
-
-    for line in &lines {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        if let Ok(entry) = serde_json::from_str::<TranscriptEntry>(line)
-            && entry.uuid.as_deref() == Some(target_uuid)
-        {
-            if entry.r#type.as_deref() == Some("assistant") {
-                if let Some(message) = &entry.message
-                    && let Some(raw_usage) = &message.usage
-                {
-                    return Some(raw_usage.clone().normalize().display_tokens());
-                }
-            } else if entry.r#type.as_deref() == Some("user")
-                && let Some(parent_uuid) = &entry.parent_uuid
-            {
-                return find_assistant_by_uuid(&lines, parent_uuid);
-            }
-            break;
-        }
-    }
-    None
-}
-
-fn find_assistant_by_uuid(lines: &[String], target_uuid: &str) -> Option<u32> {
-    for line in lines {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        if let Ok(entry) = serde_json::from_str::<TranscriptEntry>(line)
-            && entry.uuid.as_deref() == Some(target_uuid)
-            && entry.r#type.as_deref() == Some("assistant")
-            && let Some(message) = &entry.message
-            && let Some(raw_usage) = &message.usage
-        {
-            return Some(raw_usage.clone().normalize().display_tokens());
-        }
-    }
-    None
-}
-
-fn try_find_from_project_history(transcript_path: &Path) -> Option<u32> {
-    let project_dir = transcript_path.parent()?;
-    let mut session_files: Vec<PathBuf> = Vec::new();
-
-    for entry in fs::read_dir(project_dir).ok()? {
-        let path = entry.ok()?.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-            session_files.push(path);
-        }
+        assert_eq!(data.primary, "10% · 24k tokens");
+        assert_eq!(data.metadata.get("percentage").unwrap(), "10");
+        assert_eq!(data.metadata.get("tokens").unwrap(), "24000");
+        assert_eq!(data.metadata.get("limit").unwrap(), "200000");
     }
 
-    session_files.sort_by_key(|p| {
-        fs::metadata(p)
-            .and_then(|m| m.modified())
-            .unwrap_or(std::time::UNIX_EPOCH)
-    });
-    session_files.reverse();
+    #[test]
+    fn derives_missing_percentage_from_native_limit() {
+        let data = ContextWindowComponent::new()
+            .collect(&input(Some(ContextWindow {
+                total_input_tokens: Some(25_000),
+                total_output_tokens: Some(5_000),
+                context_window_size: Some(200_000),
+                used_percentage: None,
+                remaining_percentage: None,
+                current_usage: None,
+            })))
+            .unwrap();
 
-    for session_path in &session_files {
-        if let Some(usage) = try_parse_transcript_file(session_path) {
-            return Some(usage);
-        }
+        assert_eq!(data.primary, "12.5% · 30k tokens");
     }
-    None
+
+    #[test]
+    fn falls_back_to_native_current_usage_breakdown() {
+        let data = ContextWindowComponent::new()
+            .collect(&input(Some(ContextWindow {
+                total_input_tokens: None,
+                total_output_tokens: None,
+                context_window_size: Some(200_000),
+                used_percentage: None,
+                remaining_percentage: Some(92.0),
+                current_usage: Some(CurrentUsage {
+                    input_tokens: Some(8_500),
+                    output_tokens: Some(1_200),
+                    cache_creation_input_tokens: Some(5_000),
+                    cache_read_input_tokens: Some(2_000),
+                }),
+            })))
+            .unwrap();
+
+        assert_eq!(data.primary, "8% · 16.7k tokens");
+    }
+
+    #[test]
+    fn renders_unknown_values_when_context_is_absent() {
+        let data = ContextWindowComponent::new().collect(&input(None)).unwrap();
+
+        assert_eq!(data.primary, "- · - tokens");
+    }
 }
