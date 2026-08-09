@@ -1,1 +1,0 @@
-Haiku 4 | reply-fast-path | fix/reply-flow ✓ | 1.8% · 4.2k tokens | $0.08 | 41s +7 -2
