@@ -35,6 +35,13 @@ pub fn icon_set() -> IconSet {
                 },
             ), // ※
             (
+                PullRequest,
+                ComponentIcons {
+                    plain: "PR",
+                    nerd_font: "\u{ea64}",
+                },
+            ),
+            (
                 ContextWindow,
                 ComponentIcons {
                     plain: "\u{25d0}",

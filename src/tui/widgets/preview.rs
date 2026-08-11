@@ -12,7 +12,7 @@ pub struct PreviewWidget;
 
 impl PreviewWidget {
     pub fn render(f: &mut Frame, area: Rect, theme: &UserTheme, compact: bool) {
-        let texts = render::demo_texts_full();
+        let texts = render::demo_texts_for_components(&theme.components);
         let line = render::build_render_line(&theme.components, theme.style.mode, &texts);
         let spans = render::render_spans(&line);
         let line = Line::from(spans);

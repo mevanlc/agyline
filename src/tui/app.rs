@@ -1,6 +1,10 @@
 use crate::config::manager;
 use crate::config::theme::UserTheme;
-use crate::config::types::{AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP, StyleMode};
+use crate::config::types::{
+    AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS,
+    DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, PR_OPTION_OSC_HYPERLINKS,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode,
+};
 use crate::core::ring_cursor::RingCursor;
 use crate::data::icon_catalog::{IconCatalogData, IconPickerTab};
 use crossterm::event::{KeyCode, KeyModifiers};
@@ -481,6 +485,57 @@ impl App {
                             self.name_input_open = true;
                             self.name_input_buffer = value;
                             self.name_input_purpose = NameInputPurpose::HostnameRstrip;
+                        }
+                        FieldSelection::PrReviewState => {
+                            let comp = &mut self.theme.components[self.selected_component];
+                            let enabled = comp
+                                .options
+                                .get(PR_OPTION_SHOW_REVIEW_STATE)
+                                .and_then(|value| value.as_bool())
+                                .unwrap_or(DEFAULT_PR_SHOW_REVIEW_STATE);
+                            comp.options.insert(
+                                PR_OPTION_SHOW_REVIEW_STATE.into(),
+                                serde_json::Value::Bool(!enabled),
+                            );
+                            self.status_message = Some(format!(
+                                "PR review state {}",
+                                if enabled { "hidden" } else { "shown" }
+                            ));
+                            self.mark_dirty();
+                        }
+                        FieldSelection::PrUrl => {
+                            let comp = &mut self.theme.components[self.selected_component];
+                            let enabled = comp
+                                .options
+                                .get(PR_OPTION_SHOW_URL)
+                                .and_then(|value| value.as_bool())
+                                .unwrap_or(DEFAULT_PR_SHOW_URL);
+                            comp.options.insert(
+                                PR_OPTION_SHOW_URL.into(),
+                                serde_json::Value::Bool(!enabled),
+                            );
+                            self.status_message = Some(format!(
+                                "PR URL {}",
+                                if enabled { "hidden" } else { "shown" }
+                            ));
+                            self.mark_dirty();
+                        }
+                        FieldSelection::PrOscHyperlinks => {
+                            let comp = &mut self.theme.components[self.selected_component];
+                            let enabled = comp
+                                .options
+                                .get(PR_OPTION_OSC_HYPERLINKS)
+                                .and_then(|value| value.as_bool())
+                                .unwrap_or(DEFAULT_PR_OSC_HYPERLINKS);
+                            comp.options.insert(
+                                PR_OPTION_OSC_HYPERLINKS.into(),
+                                serde_json::Value::Bool(!enabled),
+                            );
+                            self.status_message = Some(format!(
+                                "PR OSC hyperlinks {}",
+                                if enabled { "disabled" } else { "enabled" }
+                            ));
+                            self.mark_dirty();
                         }
                         FieldSelection::PerModelIcons => {
                             let comp = &mut self.theme.components[self.selected_component];
@@ -1679,6 +1734,55 @@ impl App {
         }
         if self.icon_picker_open {
             super::widgets::icon_picker::render(f, f.area(), &self.icon_picker, &self.icon_catalog);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{App, FieldSelection, Panel};
+    use crate::config::theme::UserTheme;
+    use crate::config::types::{
+        ComponentId, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+    };
+
+    #[test]
+    fn pull_request_editor_toggles_each_option_independently() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+        app.selected_component = app
+            .theme
+            .components
+            .iter()
+            .position(|component| component.id == ComponentId::PullRequest)
+            .unwrap();
+        app.selected_panel.set(&Panel::Editor);
+
+        for (field, option, expected) in [
+            (
+                FieldSelection::PrReviewState,
+                PR_OPTION_SHOW_REVIEW_STATE,
+                false,
+            ),
+            (FieldSelection::PrUrl, PR_OPTION_SHOW_URL, true),
+            (
+                FieldSelection::PrOscHyperlinks,
+                PR_OPTION_OSC_HYPERLINKS,
+                false,
+            ),
+        ] {
+            app.selected_field = field;
+            app.toggle_current();
+            assert_eq!(
+                app.theme.components[app.selected_component]
+                    .options
+                    .get(option)
+                    .and_then(|value| value.as_bool()),
+                Some(expected)
+            );
         }
     }
 }

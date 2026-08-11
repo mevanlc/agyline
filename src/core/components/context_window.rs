@@ -139,6 +139,7 @@ mod tests {
             thinking: None,
             context_window,
             rate_limits: None,
+            pr: None,
             cost: None,
             output_style: None,
         }

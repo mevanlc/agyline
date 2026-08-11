@@ -3,6 +3,12 @@ use std::collections::HashMap;
 use std::fmt;
 
 pub const DEFAULT_HOSTNAME_RSTRIP: &str = ".local,.localhost,.lan";
+pub const PR_OPTION_SHOW_REVIEW_STATE: &str = "show_review_state";
+pub const PR_OPTION_SHOW_URL: &str = "show_url";
+pub const PR_OPTION_OSC_HYPERLINKS: &str = "osc_hyperlinks";
+pub const DEFAULT_PR_SHOW_REVIEW_STATE: bool = true;
+pub const DEFAULT_PR_SHOW_URL: bool = false;
+pub const DEFAULT_PR_OSC_HYPERLINKS: bool = true;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -11,6 +17,7 @@ pub enum ComponentId {
     Directory,
     Hostname,
     Git,
+    PullRequest,
     ContextWindow,
     #[serde(rename = "usage_5h")]
     UsageFiveHour,
@@ -29,6 +36,7 @@ impl ComponentId {
         ComponentId::Directory,
         ComponentId::Hostname,
         ComponentId::Git,
+        ComponentId::PullRequest,
         ComponentId::ContextWindow,
         ComponentId::UsageFiveHour,
         ComponentId::UsageSevenDay,
@@ -44,6 +52,7 @@ impl ComponentId {
             ComponentId::Directory => "Directory",
             ComponentId::Hostname => "Hostname",
             ComponentId::Git => "Git",
+            ComponentId::PullRequest => "Pull Request",
             ComponentId::ContextWindow => "Context Window",
             ComponentId::UsageFiveHour => "Usage (5h)",
             ComponentId::UsageSevenDay => "Usage (7d)",
@@ -60,6 +69,7 @@ impl ComponentId {
             ComponentId::Directory => "Current working directory",
             ComponentId::Hostname => "Current machine hostname",
             ComponentId::Git => "Branch and working tree status",
+            ComponentId::PullRequest => "Open pull request and review state",
             ComponentId::ContextWindow => "Context window fill percentage",
             ComponentId::UsageFiveHour => "Five-hour rate-limit usage",
             ComponentId::UsageSevenDay => "Seven-day rate-limit usage",
@@ -76,6 +86,7 @@ impl ComponentId {
             ComponentId::Directory => "Directory",
             ComponentId::Hostname => "Hostname",
             ComponentId::Git => "Git",
+            ComponentId::PullRequest => "PR",
             ComponentId::ContextWindow => "Ctx Window",
             ComponentId::UsageFiveHour => "Usage (5h)",
             ComponentId::UsageSevenDay => "Usage (7d)",
@@ -229,7 +240,7 @@ mod tests {
     use super::ComponentId;
 
     #[test]
-    fn usage_components_have_distinct_labels_and_config_ids() {
+    fn component_labels_and_config_ids_are_stable() {
         assert_eq!(ComponentId::UsageFiveHour.display_name(), "Usage (5h)");
         assert_eq!(ComponentId::UsageSevenDay.display_name(), "Usage (7d)");
         assert_eq!(
@@ -239,6 +250,11 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&ComponentId::UsageSevenDay).unwrap(),
             "\"usage_7d\""
+        );
+        assert_eq!(ComponentId::PullRequest.display_name(), "Pull Request");
+        assert_eq!(
+            serde_json::to_string(&ComponentId::PullRequest).unwrap(),
+            "\"pull_request\""
         );
     }
 }

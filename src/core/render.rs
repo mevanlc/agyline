@@ -4,7 +4,10 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
 use unicode_width::UnicodeWidthStr;
 
-use crate::config::types::{AnsiColor, ComponentConfig, ComponentId, StyleMode};
+use crate::config::types::{
+    AnsiColor, ComponentConfig, ComponentId, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode,
+};
 
 const POWERLINE_SEPARATOR_GLYPH: &str = "\u{e0b0}";
 const PLAIN_POWERLINE_SEPARATOR_GLYPH: &str = "\u{25ba}";
@@ -235,6 +238,7 @@ pub fn demo_texts_full() -> HashMap<ComponentId, SegmentText> {
         (ComponentId::Directory, ("project".into(), String::new())),
         (ComponentId::Hostname, ("workstation".into(), String::new())),
         (ComponentId::Git, ("main \u{2713}".into(), String::new())),
+        (ComponentId::PullRequest, ("#482".into(), "approved".into())),
         (
             ComponentId::ContextWindow,
             ("12% \u{b7} 24k tokens".into(), String::new()),
@@ -247,6 +251,42 @@ pub fn demo_texts_full() -> HashMap<ComponentId, SegmentText> {
     ])
 }
 
+/// Full demo text adjusted for component-specific display options.
+pub fn demo_texts_for_components(
+    components: &[ComponentConfig],
+) -> HashMap<ComponentId, SegmentText> {
+    let mut texts = demo_texts_full();
+    let Some(pull_request) = components
+        .iter()
+        .find(|component| component.id == ComponentId::PullRequest)
+    else {
+        return texts;
+    };
+
+    let show_review_state = pull_request
+        .options
+        .get(PR_OPTION_SHOW_REVIEW_STATE)
+        .and_then(|value| value.as_bool())
+        .unwrap_or(DEFAULT_PR_SHOW_REVIEW_STATE);
+    let show_url = pull_request
+        .options
+        .get(PR_OPTION_SHOW_URL)
+        .and_then(|value| value.as_bool())
+        .unwrap_or(DEFAULT_PR_SHOW_URL);
+    let mut secondary = Vec::new();
+    if show_review_state {
+        secondary.push("approved");
+    }
+    if show_url {
+        secondary.push("https://github.com/example/repo/pull/482");
+    }
+    texts.insert(
+        ComponentId::PullRequest,
+        ("#482".into(), secondary.join(" ")),
+    );
+    texts
+}
+
 /// Compact demo text for import menu previews.
 pub fn demo_texts_compact() -> HashMap<ComponentId, SegmentText> {
     HashMap::from([
@@ -254,6 +294,7 @@ pub fn demo_texts_compact() -> HashMap<ComponentId, SegmentText> {
         (ComponentId::Directory, ("prj".into(), String::new())),
         (ComponentId::Hostname, ("host".into(), String::new())),
         (ComponentId::Git, ("main \u{2713}".into(), String::new())),
+        (ComponentId::PullRequest, ("#482".into(), String::new())),
         (ComponentId::ContextWindow, ("12%".into(), String::new())),
         (ComponentId::UsageFiveHour, ("5h 23%".into(), String::new())),
         (ComponentId::UsageSevenDay, ("7d 41%".into(), String::new())),
@@ -568,9 +609,36 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::config::theme::UserTheme;
-    use crate::config::types::{ComponentId, StyleMode};
+    use crate::config::types::{
+        ComponentId, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode,
+    };
 
-    use super::{PLAIN_POWERLINE_SEPARATOR_GLYPH, RenderItem, build_render_line, render_ansi};
+    use super::{
+        PLAIN_POWERLINE_SEPARATOR_GLYPH, RenderItem, build_render_line, demo_texts_for_components,
+        render_ansi,
+    };
+
+    #[test]
+    fn pull_request_demo_tracks_visible_fields() {
+        let mut theme = UserTheme::default_theme();
+        let pull_request = theme.get_component_mut(ComponentId::PullRequest).unwrap();
+        pull_request.options.insert(
+            PR_OPTION_SHOW_REVIEW_STATE.into(),
+            serde_json::Value::Bool(false),
+        );
+        pull_request
+            .options
+            .insert(PR_OPTION_SHOW_URL.into(), serde_json::Value::Bool(true));
+
+        let texts = demo_texts_for_components(&theme.components);
+        assert_eq!(
+            texts.get(&ComponentId::PullRequest),
+            Some(&(
+                "#482".into(),
+                "https://github.com/example/repo/pull/482".into()
+            ))
+        );
+    }
 
     #[test]
     fn plain_powerline_uses_solid_pointer_separator() {

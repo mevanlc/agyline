@@ -46,6 +46,15 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
+                PullRequest,
+                ComponentColors {
+                    icon: Some(C { c16: 12 }),
+                    text: Some(C { c16: 12 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
                 ContextWindow,
                 ComponentColors {
                     icon: Some(C { c16: 13 }),

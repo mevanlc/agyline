@@ -5,6 +5,7 @@ pub mod git;
 pub mod hostname;
 pub mod model;
 pub mod output_style;
+pub mod pull_request;
 pub mod session;
 pub mod usage;
 
@@ -40,5 +41,6 @@ pub use git::GitComponent;
 pub use hostname::HostnameComponent;
 pub use model::ModelComponent;
 pub use output_style::OutputStyleComponent;
+pub use pull_request::PullRequestComponent;
 pub use session::SessionComponent;
 pub use usage::{FiveHourUsageComponent, SevenDayUsageComponent};

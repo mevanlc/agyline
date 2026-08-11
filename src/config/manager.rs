@@ -1,12 +1,53 @@
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use crate::config::theme::UserTheme;
 
-/// Get the themes directory: ~/.claude/xline/themes/
-pub fn themes_dir() -> PathBuf {
+pub const CONFIG_DIR_ENV: &str = "XLINE_CONFIG_DIR";
+
+static CONFIG_DIR_OVERRIDE: OnceLock<PathBuf> = OnceLock::new();
+
+/// Set the config directory selected by the command line.
+///
+/// This must be called before any config paths are resolved. The override can
+/// only be set once per process.
+pub fn set_config_dir_override(path: PathBuf) -> Result<(), PathBuf> {
+    CONFIG_DIR_OVERRIDE.set(path)
+}
+
+/// Get the xline config directory.
+///
+/// Precedence is: command-line override, `XLINE_CONFIG_DIR`, then
+/// `~/.claude/xline`.
+pub fn config_dir() -> PathBuf {
+    if let Some(path) = config_dir_override(
+        CONFIG_DIR_OVERRIDE.get().map(PathBuf::as_path),
+        std::env::var_os(CONFIG_DIR_ENV).as_deref(),
+    ) {
+        return path;
+    }
+
     let home = dirs::home_dir().expect("could not determine home directory");
-    home.join(".claude").join("xline").join("themes")
+    default_config_dir(&home)
+}
+
+fn config_dir_override(cli: Option<&Path>, env: Option<&OsStr>) -> Option<PathBuf> {
+    if let Some(path) = cli {
+        return Some(path.to_path_buf());
+    }
+
+    env.filter(|path| !path.is_empty()).map(PathBuf::from)
+}
+
+fn default_config_dir(home: &Path) -> PathBuf {
+    home.join(".claude").join("xline")
+}
+
+/// Get the themes directory beneath the xline config directory.
+pub fn themes_dir() -> PathBuf {
+    config_dir().join("themes")
 }
 
 /// Ensure the themes directory exists and contains at least one theme.
@@ -403,9 +444,41 @@ impl std::error::Error for RenameError {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsStr;
 
     fn setup_temp_dir() -> tempfile::TempDir {
         tempfile::tempdir().unwrap()
+    }
+
+    #[test]
+    fn config_dir_cli_override_takes_precedence() {
+        let resolved = config_dir_override(
+            Some(Path::new("/cli/config")),
+            Some(OsStr::new("/env/config")),
+        );
+
+        assert_eq!(resolved, Some(PathBuf::from("/cli/config")));
+    }
+
+    #[test]
+    fn config_dir_uses_environment_override() {
+        let resolved = config_dir_override(None, Some(OsStr::new("/env/config")));
+
+        assert_eq!(resolved, Some(PathBuf::from("/env/config")));
+    }
+
+    #[test]
+    fn config_dir_defaults_beneath_home() {
+        let resolved = default_config_dir(Path::new("/home/tester"));
+
+        assert_eq!(resolved, Path::new("/home/tester/.claude/xline"));
+    }
+
+    #[test]
+    fn empty_environment_override_uses_default() {
+        let resolved = config_dir_override(None, Some(OsStr::new("")));
+
+        assert_eq!(resolved, None);
     }
 
     #[test]

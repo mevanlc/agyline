@@ -1,5 +1,9 @@
 use crate::config::theme::UserTheme;
-use crate::config::types::{AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP};
+use crate::config::types::{
+    AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS,
+    DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, PR_OPTION_OSC_HYPERLINKS,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+};
 use crate::core::render;
 use ratatui::{
     Frame,
@@ -16,6 +20,9 @@ pub enum FieldSelection {
     PlainIcon,
     NerdFontIcon,
     HostnameRstrip,
+    PrReviewState,
+    PrUrl,
+    PrOscHyperlinks,
     PerModelIcons,
     EffortLevel,
     ThinkingIcon,
@@ -58,6 +65,9 @@ impl FieldSelection {
             fields.push(Self::NerdFontIcon);
             if comp.id == ComponentId::Hostname {
                 fields.push(Self::HostnameRstrip);
+            }
+            if comp.id == ComponentId::PullRequest {
+                fields.extend([Self::PrReviewState, Self::PrUrl, Self::PrOscHyperlinks]);
             }
         }
 
@@ -130,6 +140,51 @@ impl EditorWidget {
                         .and_then(|value| value.as_str())
                         .unwrap_or(DEFAULT_HOSTNAME_RSTRIP)
                         .into(),
+                    None,
+                ),
+                FieldSelection::PrReviewState => (
+                    "Review State",
+                    if comp
+                        .options
+                        .get(PR_OPTION_SHOW_REVIEW_STATE)
+                        .and_then(|value| value.as_bool())
+                        .unwrap_or(DEFAULT_PR_SHOW_REVIEW_STATE)
+                    {
+                        "Yes"
+                    } else {
+                        "No"
+                    }
+                    .into(),
+                    None,
+                ),
+                FieldSelection::PrUrl => (
+                    "URL",
+                    if comp
+                        .options
+                        .get(PR_OPTION_SHOW_URL)
+                        .and_then(|value| value.as_bool())
+                        .unwrap_or(DEFAULT_PR_SHOW_URL)
+                    {
+                        "Yes"
+                    } else {
+                        "No"
+                    }
+                    .into(),
+                    None,
+                ),
+                FieldSelection::PrOscHyperlinks => (
+                    "OSC Hyperlinks",
+                    if comp
+                        .options
+                        .get(PR_OPTION_OSC_HYPERLINKS)
+                        .and_then(|value| value.as_bool())
+                        .unwrap_or(DEFAULT_PR_OSC_HYPERLINKS)
+                    {
+                        "Yes"
+                    } else {
+                        "No"
+                    }
+                    .into(),
                     None,
                 ),
                 FieldSelection::PerModelIcons => {
@@ -342,5 +397,16 @@ mod tests {
 
         assert!(FieldSelection::fields_for(hostname).contains(&FieldSelection::HostnameRstrip));
         assert!(!FieldSelection::fields_for(directory).contains(&FieldSelection::HostnameRstrip));
+    }
+
+    #[test]
+    fn pull_request_fields_include_all_visibility_toggles() {
+        let theme = UserTheme::default_theme();
+        let pull_request = theme.get_component(ComponentId::PullRequest).unwrap();
+        let fields = FieldSelection::fields_for(pull_request);
+
+        assert!(fields.contains(&FieldSelection::PrReviewState));
+        assert!(fields.contains(&FieldSelection::PrUrl));
+        assert!(fields.contains(&FieldSelection::PrOscHyperlinks));
     }
 }

@@ -8,6 +8,7 @@ pub struct InputData {
     pub thinking: Option<Thinking>,
     pub context_window: Option<ContextWindow>,
     pub rate_limits: Option<RateLimits>,
+    pub pr: Option<PullRequest>,
     pub cost: Option<Cost>,
     pub output_style: Option<OutputStyle>,
 }
@@ -64,6 +65,13 @@ pub struct RateLimitWindow {
 }
 
 #[derive(Deserialize)]
+pub struct PullRequest {
+    pub number: u64,
+    pub url: String,
+    pub review_state: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct Cost {
     pub total_cost_usd: Option<f64>,
     pub total_duration_ms: Option<u64>,
@@ -82,7 +90,7 @@ mod tests {
     use super::InputData;
 
     #[test]
-    fn deserializes_native_context_and_rate_limit_payloads() {
+    fn deserializes_native_context_rate_limit_and_pull_request_payloads() {
         let input: InputData = serde_json::from_str(
             r#"{
                 "model": {"id": "claude-sonnet-4-5", "display_name": "Sonnet 4.5"},
@@ -106,6 +114,11 @@ mod tests {
                     "five_hour": {"used_percentage": 23.5, "resets_at": 1738425600},
                     "seven_day": {"used_percentage": 41.2, "resets_at": 1738857600}
                 },
+                "pr": {
+                    "number": 482,
+                    "url": "https://github.com/example/repo/pull/482",
+                    "review_state": "approved"
+                },
                 "cost": null,
                 "output_style": null
             }"#,
@@ -122,5 +135,10 @@ mod tests {
         let limits = input.rate_limits.unwrap();
         assert_eq!(limits.five_hour.unwrap().used_percentage, Some(23.5));
         assert_eq!(limits.seven_day.unwrap().resets_at, Some(1_738_857_600));
+
+        let pr = input.pr.unwrap();
+        assert_eq!(pr.number, 482);
+        assert_eq!(pr.url, "https://github.com/example/repo/pull/482");
+        assert_eq!(pr.review_state.as_deref(), Some("approved"));
     }
 }

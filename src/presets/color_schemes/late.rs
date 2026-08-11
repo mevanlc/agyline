@@ -79,6 +79,23 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
+                PullRequest,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 175,
+                        g: 186,
+                        b: 103,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 175,
+                        g: 186,
+                        b: 103,
+                    }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
                 ContextWindow,
                 ComponentColors {
                     icon: Some(AnsiColor::Rgb {

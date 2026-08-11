@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::types::{
-    AnsiColor, ColorConfig, ComponentConfig, ComponentId, DEFAULT_HOSTNAME_RSTRIP, IconConfig,
-    StyleConfig, StyleMode, TextStyleConfig,
+    AnsiColor, ColorConfig, ComponentConfig, ComponentId, DEFAULT_HOSTNAME_RSTRIP,
+    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, IconConfig,
+    PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleConfig,
+    StyleMode, TextStyleConfig,
 };
 
 /// A complete user theme — settings + colors + icons for all components.
@@ -92,6 +94,35 @@ impl UserTheme {
                 },
                 styles: TextStyleConfig { text_bold: false },
                 options: Default::default(),
+            },
+            ComponentConfig {
+                id: PullRequest,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f500}".into(), // 🔀
+                    nerd_font: "\u{ea64}".into(),
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 12 }),
+                    text: Some(AnsiColor::Color16 { c16: 12 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: std::collections::HashMap::from([
+                    (
+                        PR_OPTION_SHOW_REVIEW_STATE.into(),
+                        serde_json::Value::Bool(DEFAULT_PR_SHOW_REVIEW_STATE),
+                    ),
+                    (
+                        PR_OPTION_SHOW_URL.into(),
+                        serde_json::Value::Bool(DEFAULT_PR_SHOW_URL),
+                    ),
+                    (
+                        PR_OPTION_OSC_HYPERLINKS.into(),
+                        serde_json::Value::Bool(DEFAULT_PR_OSC_HYPERLINKS),
+                    ),
+                ]),
             },
             ComponentConfig {
                 id: ContextWindow,
@@ -300,9 +331,40 @@ mod tests {
     }
 
     #[test]
+    fn test_pull_request_defaults_are_compact_and_hyperlinked() {
+        let theme = UserTheme::default_theme();
+        let pull_request = theme.get_component(ComponentId::PullRequest).unwrap();
+
+        assert!(!pull_request.enabled);
+        assert_eq!(
+            pull_request
+                .options
+                .get(PR_OPTION_SHOW_REVIEW_STATE)
+                .and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            pull_request
+                .options
+                .get(PR_OPTION_SHOW_URL)
+                .and_then(|value| value.as_bool()),
+            Some(false)
+        );
+        assert_eq!(
+            pull_request
+                .options
+                .get(PR_OPTION_OSC_HYPERLINKS)
+                .and_then(|value| value.as_bool()),
+            Some(true)
+        );
+    }
+
+    #[test]
     fn test_add_missing_components_uses_default_order() {
         let mut theme = UserTheme::default_theme();
-        theme.components.retain(|c| c.id != ComponentId::Hostname);
+        theme
+            .components
+            .retain(|c| c.id != ComponentId::Hostname && c.id != ComponentId::PullRequest);
 
         theme.add_missing_components();
 
@@ -319,6 +381,22 @@ mod tests {
                 .get("rstrip")
                 .and_then(|value| value.as_str()),
             Some(DEFAULT_HOSTNAME_RSTRIP)
+        );
+
+        let git = theme
+            .components
+            .iter()
+            .position(|c| c.id == ComponentId::Git)
+            .unwrap();
+        let pull_request = &theme.components[git + 1];
+        assert_eq!(pull_request.id, ComponentId::PullRequest);
+        assert!(!pull_request.enabled);
+        assert_eq!(
+            pull_request
+                .options
+                .get(PR_OPTION_OSC_HYPERLINKS)
+                .and_then(|value| value.as_bool()),
+            Some(true)
         );
     }
 

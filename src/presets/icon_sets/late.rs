@@ -35,6 +35,13 @@ pub fn icon_set() -> IconSet {
                 },
             ), // 🔀 / 󰘬 md-source_branch
             (
+                PullRequest,
+                ComponentIcons {
+                    plain: "\u{1f500}",
+                    nerd_font: "\u{ea64}",
+                },
+            ), // 🔀 /  cod-git_pull_request
+            (
                 ContextWindow,
                 ComponentIcons {
                     plain: "\u{1f52e}",
