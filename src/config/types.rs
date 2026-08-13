@@ -9,6 +9,66 @@ pub const PR_OPTION_OSC_HYPERLINKS: &str = "osc_hyperlinks";
 pub const DEFAULT_PR_SHOW_REVIEW_STATE: bool = true;
 pub const DEFAULT_PR_SHOW_URL: bool = false;
 pub const DEFAULT_PR_OSC_HYPERLINKS: bool = true;
+pub const USAGE_OPTION_VALUE: &str = "value";
+
+/// Which side of a rate-limit window the usage components display.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UsageValue {
+    #[default]
+    Used,
+    Remaining,
+}
+
+impl UsageValue {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            UsageValue::Used => "Used",
+            UsageValue::Remaining => "Remaining",
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UsageValue::Used => "used",
+            UsageValue::Remaining => "remaining",
+        }
+    }
+
+    pub fn toggled(self) -> Self {
+        match self {
+            UsageValue::Used => UsageValue::Remaining,
+            UsageValue::Remaining => UsageValue::Used,
+        }
+    }
+
+    /// Read the setting out of a component's options, falling back to the default.
+    pub fn from_options(options: &HashMap<String, serde_json::Value>) -> Self {
+        options
+            .get(USAGE_OPTION_VALUE)
+            .and_then(|value| value.as_str())
+            .and_then(|value| match value {
+                "used" => Some(UsageValue::Used),
+                "remaining" => Some(UsageValue::Remaining),
+                _ => None,
+            })
+            .unwrap_or_default()
+    }
+
+    /// Apply the setting to a rate-limit percentage reported as "used".
+    pub fn apply(self, used_percentage: f64) -> f64 {
+        match self {
+            UsageValue::Used => used_percentage,
+            UsageValue::Remaining => (100.0 - used_percentage).clamp(0.0, 100.0),
+        }
+    }
+}
+
+impl fmt::Display for UsageValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.display_name())
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

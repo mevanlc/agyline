@@ -2,7 +2,7 @@ use crate::config::theme::UserTheme;
 use crate::config::types::{
     AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS,
     DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, PR_OPTION_OSC_HYPERLINKS,
-    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, UsageValue,
 };
 use crate::core::render;
 use ratatui::{
@@ -23,6 +23,7 @@ pub enum FieldSelection {
     PrReviewState,
     PrUrl,
     PrOscHyperlinks,
+    UsageValue,
     PerModelIcons,
     EffortLevel,
     ThinkingIcon,
@@ -68,6 +69,12 @@ impl FieldSelection {
             }
             if comp.id == ComponentId::PullRequest {
                 fields.extend([Self::PrReviewState, Self::PrUrl, Self::PrOscHyperlinks]);
+            }
+            if matches!(
+                comp.id,
+                ComponentId::UsageFiveHour | ComponentId::UsageSevenDay
+            ) {
+                fields.push(Self::UsageValue);
             }
         }
 
@@ -185,6 +192,13 @@ impl EditorWidget {
                         "No"
                     }
                     .into(),
+                    None,
+                ),
+                FieldSelection::UsageValue => (
+                    "Value",
+                    UsageValue::from_options(&comp.options)
+                        .display_name()
+                        .into(),
                     None,
                 ),
                 FieldSelection::PerModelIcons => {
@@ -408,5 +422,17 @@ mod tests {
         assert!(fields.contains(&FieldSelection::PrReviewState));
         assert!(fields.contains(&FieldSelection::PrUrl));
         assert!(fields.contains(&FieldSelection::PrOscHyperlinks));
+    }
+
+    #[test]
+    fn value_is_only_available_for_the_usage_components() {
+        let theme = UserTheme::default_theme();
+        let five_hour = theme.get_component(ComponentId::UsageFiveHour).unwrap();
+        let seven_day = theme.get_component(ComponentId::UsageSevenDay).unwrap();
+        let context = theme.get_component(ComponentId::ContextWindow).unwrap();
+
+        assert!(FieldSelection::fields_for(five_hour).contains(&FieldSelection::UsageValue));
+        assert!(FieldSelection::fields_for(seven_day).contains(&FieldSelection::UsageValue));
+        assert!(!FieldSelection::fields_for(context).contains(&FieldSelection::UsageValue));
     }
 }

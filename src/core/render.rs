@@ -6,7 +6,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::config::types::{
     AnsiColor, ComponentConfig, ComponentId, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
-    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode, UsageValue,
 };
 
 const POWERLINE_SEPARATOR_GLYPH: &str = "\u{e0b0}";
@@ -256,6 +256,18 @@ pub fn demo_texts_for_components(
     components: &[ComponentConfig],
 ) -> HashMap<ComponentId, SegmentText> {
     let mut texts = demo_texts_full();
+
+    for (id, label, used) in [
+        (ComponentId::UsageFiveHour, "5h", 23.0),
+        (ComponentId::UsageSevenDay, "7d", 41.0),
+    ] {
+        let Some(usage) = components.iter().find(|component| component.id == id) else {
+            continue;
+        };
+        let percentage = UsageValue::from_options(&usage.options).apply(used);
+        texts.insert(id, (format!("{label} {percentage:.0}%"), String::new()));
+    }
+
     let Some(pull_request) = components
         .iter()
         .find(|component| component.id == ComponentId::PullRequest)

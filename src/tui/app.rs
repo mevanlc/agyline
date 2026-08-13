@@ -3,7 +3,7 @@ use crate::config::theme::UserTheme;
 use crate::config::types::{
     AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS,
     DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, PR_OPTION_OSC_HYPERLINKS,
-    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode, USAGE_OPTION_VALUE, UsageValue,
 };
 use crate::core::ring_cursor::RingCursor;
 use crate::data::icon_catalog::{IconCatalogData, IconPickerTab};
@@ -534,6 +534,18 @@ impl App {
                             self.status_message = Some(format!(
                                 "PR OSC hyperlinks {}",
                                 if enabled { "disabled" } else { "enabled" }
+                            ));
+                            self.mark_dirty();
+                        }
+                        FieldSelection::UsageValue => {
+                            let comp = &mut self.theme.components[self.selected_component];
+                            let value = UsageValue::from_options(&comp.options).toggled();
+                            comp.options
+                                .insert(USAGE_OPTION_VALUE.into(), value.as_str().into());
+                            self.status_message = Some(format!(
+                                "{} value: {}",
+                                comp.id.display_name(),
+                                value.display_name()
                             ));
                             self.mark_dirty();
                         }
@@ -1744,6 +1756,7 @@ mod tests {
     use crate::config::theme::UserTheme;
     use crate::config::types::{
         ComponentId, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+        USAGE_OPTION_VALUE,
     };
 
     #[test]
@@ -1783,6 +1796,39 @@ mod tests {
                     .and_then(|value| value.as_bool()),
                 Some(expected)
             );
+        }
+    }
+
+    #[test]
+    fn usage_editor_cycles_the_value_setting_per_component() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+
+        for id in [ComponentId::UsageFiveHour, ComponentId::UsageSevenDay] {
+            app.selected_component = app
+                .theme
+                .components
+                .iter()
+                .position(|component| component.id == id)
+                .unwrap();
+            app.selected_panel.set(&Panel::Editor);
+            app.selected_field = FieldSelection::UsageValue;
+
+            let value = |app: &App| {
+                app.theme.components[app.selected_component]
+                    .options
+                    .get(USAGE_OPTION_VALUE)
+                    .and_then(|value| value.as_str())
+                    .map(str::to_owned)
+            };
+
+            app.toggle_current();
+            assert_eq!(value(&app).as_deref(), Some("remaining"));
+            app.toggle_current();
+            assert_eq!(value(&app).as_deref(), Some("used"));
         }
     }
 }

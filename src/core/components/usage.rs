@@ -1,33 +1,52 @@
 use super::{Component, ComponentData};
-use crate::config::types::ComponentId;
+use crate::config::types::{ComponentId, UsageValue};
 use crate::core::input::{InputData, RateLimitWindow};
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct FiveHourUsageComponent;
+pub struct FiveHourUsageComponent {
+    value: UsageValue,
+}
 
 impl FiveHourUsageComponent {
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    pub fn with_value(mut self, value: UsageValue) -> Self {
+        self.value = value;
+        self
     }
 }
 
 #[derive(Default)]
-pub struct SevenDayUsageComponent;
+pub struct SevenDayUsageComponent {
+    value: UsageValue,
+}
 
 impl SevenDayUsageComponent {
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    pub fn with_value(mut self, value: UsageValue) -> Self {
+        self.value = value;
+        self
     }
 }
 
-fn collect_window(label: &str, window: Option<&RateLimitWindow>) -> Option<ComponentData> {
+fn collect_window(
+    label: &str,
+    window: Option<&RateLimitWindow>,
+    value: UsageValue,
+) -> Option<ComponentData> {
     let window = window?;
     let percentage = window.used_percentage?;
-    let value = if percentage.fract() == 0.0 {
-        format!("{percentage:.0}")
+    let displayed = value.apply(percentage);
+    let value = if displayed.fract() == 0.0 {
+        format!("{displayed:.0}")
     } else {
-        format!("{percentage:.1}")
+        format!("{displayed:.1}")
     };
 
     let mut metadata = HashMap::from([("percentage".into(), percentage.to_string())]);
@@ -50,6 +69,7 @@ impl Component for FiveHourUsageComponent {
                 .rate_limits
                 .as_ref()
                 .and_then(|limits| limits.five_hour.as_ref()),
+            self.value,
         )
     }
 
@@ -66,6 +86,7 @@ impl Component for SevenDayUsageComponent {
                 .rate_limits
                 .as_ref()
                 .and_then(|limits| limits.seven_day.as_ref()),
+            self.value,
         )
     }
 
@@ -77,6 +98,7 @@ impl Component for SevenDayUsageComponent {
 #[cfg(test)]
 mod tests {
     use super::{Component, FiveHourUsageComponent, SevenDayUsageComponent};
+    use crate::config::types::UsageValue;
     use crate::core::input::{InputData, Model, RateLimitWindow, RateLimits, Workspace};
 
     fn input(rate_limits: Option<RateLimits>) -> InputData {
@@ -131,6 +153,24 @@ mod tests {
         assert_eq!(data.primary, "7d 41.2%");
         assert!(data.secondary.is_empty());
         assert_eq!(data.metadata.get("resets_at").unwrap(), "1738857600");
+    }
+
+    #[test]
+    fn remaining_value_inverts_the_reported_percentage() {
+        let input = both_windows();
+
+        let five_hour = FiveHourUsageComponent::new()
+            .with_value(UsageValue::Remaining)
+            .collect(&input)
+            .unwrap();
+        let seven_day = SevenDayUsageComponent::new()
+            .with_value(UsageValue::Remaining)
+            .collect(&input)
+            .unwrap();
+
+        assert_eq!(five_hour.primary, "5h 76.5%");
+        assert_eq!(seven_day.primary, "7d 58.8%");
+        assert_eq!(five_hour.metadata.get("percentage").unwrap(), "23.5");
     }
 
     #[test]

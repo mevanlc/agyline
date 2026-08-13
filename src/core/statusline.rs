@@ -2,7 +2,7 @@ use crate::config::theme::UserTheme;
 use crate::config::types::{
     ComponentConfig, ComponentId, DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS,
     DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, PR_OPTION_OSC_HYPERLINKS,
-    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, UsageValue,
 };
 use crate::core::components::ComponentData;
 use crate::core::render;
@@ -110,8 +110,12 @@ pub fn collect_all_components(
                     .collect(input)
             }
             ComponentId::ContextWindow => ContextWindowComponent::new().collect(input),
-            ComponentId::UsageFiveHour => FiveHourUsageComponent::new().collect(input),
-            ComponentId::UsageSevenDay => SevenDayUsageComponent::new().collect(input),
+            ComponentId::UsageFiveHour => FiveHourUsageComponent::new()
+                .with_value(UsageValue::from_options(&comp_cfg.options))
+                .collect(input),
+            ComponentId::UsageSevenDay => SevenDayUsageComponent::new()
+                .with_value(UsageValue::from_options(&comp_cfg.options))
+                .collect(input),
             ComponentId::Cost => CostComponent::new().collect(input),
             ComponentId::Session => SessionComponent::new().collect(input),
             ComponentId::OutputStyle => OutputStyleComponent::new().collect(input),
