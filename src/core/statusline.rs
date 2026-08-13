@@ -1,10 +1,10 @@
 use crate::config::theme::UserTheme;
 use crate::config::types::{
     ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
-    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
-    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
-    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, UsageValue,
-    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
+    DEFAULT_MODEL_SHOW_EFFORT, DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE,
+    DEFAULT_PR_SHOW_URL, DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH,
+    MODEL_OPTION_SHOW_EFFORT, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE,
+    PR_OPTION_SHOW_URL, UsageValue, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 use crate::core::components::{ComponentData, METADATA_DISPLAYED_BRANCH};
 use crate::core::render;
@@ -57,9 +57,9 @@ pub fn collect_all_components(
             ComponentId::Model => {
                 let show_effort = comp_cfg
                     .options
-                    .get("show_effort")
+                    .get(MODEL_OPTION_SHOW_EFFORT)
                     .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
+                    .unwrap_or(DEFAULT_MODEL_SHOW_EFFORT);
                 let thinking_icon = comp_cfg
                     .options
                     .get("thinking_icon")

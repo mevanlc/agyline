@@ -2,9 +2,10 @@ use crate::config::manager;
 use crate::config::theme::UserTheme;
 use crate::config::types::{
     AnsiColor, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
-    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
-    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
-    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode, USAGE_OPTION_VALUE, UsageValue,
+    DEFAULT_MODEL_SHOW_EFFORT, DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE,
+    DEFAULT_PR_SHOW_URL, DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH,
+    MODEL_OPTION_SHOW_EFFORT, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE,
+    PR_OPTION_SHOW_URL, StyleMode, USAGE_OPTION_VALUE, UsageValue,
     WORKTREE_OPTION_OUTSIDE_WORKTREES, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 use crate::core::ring_cursor::RingCursor;
@@ -598,20 +599,17 @@ impl App {
                         }
                         FieldSelection::PerModelIcons => {
                             let comp = &mut self.theme.components[self.selected_component];
-                            let pm = comp.icon.per_model.get_or_insert_with(|| {
-                                crate::config::types::PerModelIcons {
-                                    enabled: false,
-                                    opus: "\u{1f419}".into(),           // 🐙
-                                    sonnet: "\u{1f3b6}".into(),         // 🎶
-                                    haiku: "\u{1f338}".into(),          // 🌸
-                                    fable: "\u{1f52e}".into(),          // 🔮
-                                    mythos: "\u{1f6e1}\u{fe0f}".into(), // 🛡️
-                                }
-                            });
-                            pm.enabled = !pm.enabled;
+                            if let Some(pm) = &mut comp.icon.per_model {
+                                pm.enabled = !pm.enabled;
+                            } else {
+                                comp.icon.per_model =
+                                    Some(crate::config::types::PerModelIcons::default());
+                            }
+                            let pm_enabled =
+                                comp.icon.per_model.as_ref().is_some_and(|pm| pm.enabled);
                             self.status_message = Some(format!(
                                 "Per-model icons {}",
-                                if pm.enabled { "enabled" } else { "disabled" }
+                                if pm_enabled { "enabled" } else { "disabled" }
                             ));
                             // Clamp selected_field to stay in valid range
                             let fields = FieldSelection::fields_for(
@@ -626,11 +624,13 @@ impl App {
                             let comp = &mut self.theme.components[self.selected_component];
                             let enabled = comp
                                 .options
-                                .get("show_effort")
+                                .get(MODEL_OPTION_SHOW_EFFORT)
                                 .and_then(|v| v.as_bool())
-                                .unwrap_or(false);
-                            comp.options
-                                .insert("show_effort".into(), serde_json::Value::Bool(!enabled));
+                                .unwrap_or(DEFAULT_MODEL_SHOW_EFFORT);
+                            comp.options.insert(
+                                MODEL_OPTION_SHOW_EFFORT.into(),
+                                serde_json::Value::Bool(!enabled),
+                            );
                             self.status_message = Some(format!(
                                 "Effort level {}",
                                 if enabled { "disabled" } else { "enabled" }

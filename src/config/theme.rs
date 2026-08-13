@@ -2,11 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::types::{
     AnsiColor, ColorConfig, ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH,
-    DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE,
-    DEFAULT_PR_SHOW_URL, DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH,
-    IconConfig, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
-    StyleConfig, StyleMode, TextStyleConfig, WORKTREE_OPTION_OUTSIDE_WORKTREES,
-    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
+    DEFAULT_HOSTNAME_RSTRIP, DEFAULT_MODEL_SHOW_EFFORT, DEFAULT_PR_OSC_HYPERLINKS,
+    DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH,
+    GIT_OPTION_AUTOHIDE_BRANCH, IconConfig, MODEL_OPTION_SHOW_EFFORT, PR_OPTION_OSC_HYPERLINKS,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, PerModelIcons, StyleConfig, StyleMode,
+    TextStyleConfig, WORKTREE_OPTION_OUTSIDE_WORKTREES, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH,
+    WorktreeOutside,
 };
 
 /// A complete user theme — settings + colors + icons for all components.
@@ -34,7 +35,7 @@ impl UserTheme {
                 id: Model,
                 enabled: true,
                 icon: IconConfig {
-                    per_model: None,
+                    per_model: Some(PerModelIcons::default()),
                     plain: "\u{1f916}".into(), // 🤖
                     nerd_font: "\u{e26d}".into(),
                 },
@@ -44,7 +45,10 @@ impl UserTheme {
                     background: None,
                 },
                 styles: TextStyleConfig { text_bold: false },
-                options: Default::default(),
+                options: std::collections::HashMap::from([(
+                    MODEL_OPTION_SHOW_EFFORT.into(),
+                    serde_json::Value::Bool(DEFAULT_MODEL_SHOW_EFFORT),
+                )]),
             },
             ComponentConfig {
                 id: Directory,
@@ -421,6 +425,22 @@ mod tests {
                 .get(WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH)
                 .and_then(|value| value.as_bool()),
             Some(false)
+        );
+    }
+
+    #[test]
+    fn test_model_defaults_have_per_model_icons_and_effort_enabled() {
+        let theme = UserTheme::default_theme();
+        let model = theme.get_component(ComponentId::Model).unwrap();
+
+        assert!(model.enabled);
+        assert!(model.icon.per_model.as_ref().is_some_and(|pm| pm.enabled));
+        assert_eq!(
+            model
+                .options
+                .get(MODEL_OPTION_SHOW_EFFORT)
+                .and_then(|value| value.as_bool()),
+            Some(true)
         );
     }
 

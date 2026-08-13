@@ -15,6 +15,8 @@ pub const DEFAULT_PR_SHOW_REVIEW_STATE: bool = true;
 pub const DEFAULT_PR_SHOW_URL: bool = false;
 pub const DEFAULT_PR_OSC_HYPERLINKS: bool = true;
 pub const USAGE_OPTION_VALUE: &str = "value";
+pub const MODEL_OPTION_SHOW_EFFORT: &str = "show_effort";
+pub const DEFAULT_MODEL_SHOW_EFFORT: bool = true;
 
 /// What the Worktree component displays when Claude is not in a worktree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -282,20 +284,28 @@ impl Default for StyleConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct PerModelIcons {
-    #[serde(default)]
     pub enabled: bool,
-    #[serde(default)]
     pub opus: String,
-    #[serde(default)]
     pub sonnet: String,
-    #[serde(default)]
     pub haiku: String,
-    #[serde(default)]
     pub fable: String,
-    #[serde(default)]
     pub mythos: String,
+}
+
+impl Default for PerModelIcons {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            opus: "\u{1f419}".into(),           // 🐙
+            sonnet: "\u{1f3b6}".into(),         // 🎶
+            haiku: "\u{1f338}".into(),          // 🌸
+            fable: "\u{1f52e}".into(),          // 🔮
+            mythos: "\u{1f6e1}\u{fe0f}".into(), // 🛡️
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
