@@ -54,19 +54,19 @@ pub fn scheme() -> ColorScheme {
                 Worktree,
                 ComponentColors {
                     icon: Some(AnsiColor::Rgb {
-                        r: 130,
-                        g: 170,
-                        b: 255,
+                        r: 195,
+                        g: 232,
+                        b: 141,
                     }),
                     text: Some(AnsiColor::Rgb {
-                        r: 130,
-                        g: 170,
-                        b: 255,
+                        r: 195,
+                        g: 232,
+                        b: 141,
                     }),
                     background: Some(AnsiColor::Rgb {
-                        r: 47,
-                        g: 51,
-                        b: 77,
+                        r: 30,
+                        g: 32,
+                        b: 48,
                     }),
                     text_bold: false,
                 },

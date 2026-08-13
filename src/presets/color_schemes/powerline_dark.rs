@@ -55,9 +55,9 @@ pub fn scheme() -> ColorScheme {
                     icon: white(),
                     text: white(),
                     background: Some(AnsiColor::Rgb {
-                        r: 139,
-                        g: 69,
-                        b: 19,
+                        r: 64,
+                        g: 64,
+                        b: 64,
                     }),
                     text_bold: false,
                 },

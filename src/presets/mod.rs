@@ -25,6 +25,40 @@ mod tests {
     }
 
     #[test]
+    fn worktree_inherits_each_palette_git_status_colors() {
+        for scheme in super::color_schemes::all() {
+            let worktree = scheme.get(ComponentId::Worktree).unwrap();
+            let git = scheme.get(ComponentId::Git).unwrap();
+
+            assert_eq!(worktree.icon, git.icon, "{} icon color", scheme.name);
+            assert_eq!(worktree.text, git.text, "{} text color", scheme.name);
+            assert_eq!(
+                worktree.background, git.background,
+                "{} background color",
+                scheme.name
+            );
+            assert_eq!(
+                worktree.text_bold, git.text_bold,
+                "{} bold style",
+                scheme.name
+            );
+        }
+    }
+
+    #[test]
+    fn default_palette_visually_separates_directory_and_worktree() {
+        let scheme = super::color_schemes::find("Default").unwrap();
+        let directory = scheme.get(ComponentId::Directory).unwrap();
+        let worktree = scheme.get(ComponentId::Worktree).unwrap();
+
+        assert!(
+            directory.icon != worktree.icon
+                || directory.text != worktree.text
+                || directory.background != worktree.background
+        );
+    }
+
+    #[test]
     fn test_all_icon_sets_load() {
         let sets = super::icon_sets::all();
         assert!(sets.len() >= 5, "expected at least 5 icon sets");

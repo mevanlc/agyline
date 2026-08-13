@@ -30,8 +30,8 @@ pub fn scheme() -> ColorScheme {
             (
                 Worktree,
                 ComponentColors {
-                    icon: Some(Color256 { c256: 142 }),
-                    text: Some(Color256 { c256: 142 }),
+                    icon: Some(Color256 { c256: 109 }),
+                    text: Some(Color256 { c256: 109 }),
                     background: None,
                     text_bold: true,
                 },
