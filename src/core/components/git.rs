@@ -59,6 +59,14 @@ impl GitComponent {
             .or_else(|| try_cmd(&["--no-optional-locks", "symbolic-ref", "--short", "HEAD"]))
     }
 
+    pub(crate) fn branch_name(dir: &str) -> Option<String> {
+        if !Self::is_git_repository(dir) {
+            return None;
+        }
+
+        Some(Self::get_branch(dir).unwrap_or_else(|| "detached".into()))
+    }
+
     fn get_status(dir: &str) -> GitStatus {
         let output = Command::new("git")
             .args(["--no-optional-locks", "status", "--porcelain"])
@@ -115,11 +123,7 @@ impl GitComponent {
 impl Component for GitComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
         let dir = &input.workspace.current_dir;
-        if !Self::is_git_repository(dir) {
-            return None;
-        }
-
-        let branch = Self::get_branch(dir).unwrap_or_else(|| "detached".into());
+        let branch = Self::branch_name(dir)?;
         let status = Self::get_status(dir);
         let ahead = Self::get_commit_count(dir, "@{u}..HEAD");
         let behind = Self::get_commit_count(dir, "HEAD..@{u}");

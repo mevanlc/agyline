@@ -3,6 +3,11 @@ use std::collections::HashMap;
 use std::fmt;
 
 pub const DEFAULT_HOSTNAME_RSTRIP: &str = ".local,.localhost,.lan";
+pub const GIT_OPTION_AUTOHIDE_BRANCH: &str = "autohide_branch";
+pub const DEFAULT_GIT_AUTOHIDE_BRANCH: bool = true;
+pub const WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH: &str = "show_original_branch";
+pub const DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH: bool = false;
+pub const WORKTREE_OPTION_OUTSIDE_WORKTREES: &str = "outside_worktrees";
 pub const PR_OPTION_SHOW_REVIEW_STATE: &str = "show_review_state";
 pub const PR_OPTION_SHOW_URL: &str = "show_url";
 pub const PR_OPTION_OSC_HYPERLINKS: &str = "osc_hyperlinks";
@@ -10,6 +15,75 @@ pub const DEFAULT_PR_SHOW_REVIEW_STATE: bool = true;
 pub const DEFAULT_PR_SHOW_URL: bool = false;
 pub const DEFAULT_PR_OSC_HYPERLINKS: bool = true;
 pub const USAGE_OPTION_VALUE: &str = "value";
+
+/// What the Worktree component displays when Claude is not in a worktree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorktreeOutside {
+    Hide,
+    Show,
+    #[default]
+    Branch,
+    Directory,
+}
+
+impl WorktreeOutside {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::Hide => "Hide",
+            Self::Show => "Show",
+            Self::Branch => "Branch",
+            Self::Directory => "Directory",
+        }
+    }
+
+    pub fn component_name(self) -> &'static str {
+        match self {
+            Self::Hide => "Worktree",
+            Self::Show => "Worktree (Always Show)",
+            Self::Branch => "Worktree (or Branch)",
+            Self::Directory => "Worktree (or Directory)",
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Hide => "hide",
+            Self::Show => "show",
+            Self::Branch => "branch",
+            Self::Directory => "directory",
+        }
+    }
+
+    pub fn toggled(self) -> Self {
+        match self {
+            Self::Hide => Self::Show,
+            Self::Show => Self::Branch,
+            Self::Branch => Self::Directory,
+            Self::Directory => Self::Hide,
+        }
+    }
+
+    pub fn from_options(options: &HashMap<String, serde_json::Value>) -> Self {
+        options
+            .get(WORKTREE_OPTION_OUTSIDE_WORKTREES)
+            .and_then(|value| value.as_str())
+            .and_then(|value| match value {
+                "hide" => Some(Self::Hide),
+                "show" => Some(Self::Show),
+                "branch" => Some(Self::Branch),
+                "directory" => Some(Self::Directory),
+                _ => None,
+            })
+            .unwrap_or_default()
+    }
+}
+
+impl fmt::Display for WorktreeOutside {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.display_name())
+    }
+}
 
 /// Which side of a rate-limit window the usage components display.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -75,6 +149,7 @@ impl fmt::Display for UsageValue {
 pub enum ComponentId {
     Model,
     Directory,
+    Worktree,
     Hostname,
     Git,
     PullRequest,
@@ -94,6 +169,7 @@ impl ComponentId {
     pub const ALL: &[ComponentId] = &[
         ComponentId::Model,
         ComponentId::Directory,
+        ComponentId::Worktree,
         ComponentId::Hostname,
         ComponentId::Git,
         ComponentId::PullRequest,
@@ -110,8 +186,9 @@ impl ComponentId {
         match self {
             ComponentId::Model => "Model",
             ComponentId::Directory => "Directory",
+            ComponentId::Worktree => "Worktree",
             ComponentId::Hostname => "Hostname",
-            ComponentId::Git => "Git",
+            ComponentId::Git => "Git Status",
             ComponentId::PullRequest => "Pull Request",
             ComponentId::ContextWindow => "Context Window",
             ComponentId::UsageFiveHour => "Usage (5h)",
@@ -127,8 +204,9 @@ impl ComponentId {
         match self {
             ComponentId::Model => "Active Claude model name",
             ComponentId::Directory => "Current working directory",
+            ComponentId::Worktree => "Active linked worktree",
             ComponentId::Hostname => "Current machine hostname",
-            ComponentId::Git => "Branch and working tree status",
+            ComponentId::Git => "Branch, file changes, upstream status, and optional SHA",
             ComponentId::PullRequest => "Open pull request and review state",
             ComponentId::ContextWindow => "Context window fill percentage",
             ComponentId::UsageFiveHour => "Five-hour rate-limit usage",
@@ -144,6 +222,7 @@ impl ComponentId {
         match self {
             ComponentId::Model => "Model",
             ComponentId::Directory => "Directory",
+            ComponentId::Worktree => "Worktree",
             ComponentId::Hostname => "Hostname",
             ComponentId::Git => "Git",
             ComponentId::PullRequest => "PR",
@@ -295,9 +374,19 @@ pub struct ComponentConfig {
     pub options: HashMap<String, serde_json::Value>,
 }
 
+impl ComponentConfig {
+    pub fn display_name(&self) -> &'static str {
+        if self.id == ComponentId::Worktree {
+            WorktreeOutside::from_options(&self.options).component_name()
+        } else {
+            self.id.display_name()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::ComponentId;
+    use super::{ComponentId, WorktreeOutside};
 
     #[test]
     fn component_labels_and_config_ids_are_stable() {
@@ -312,9 +401,46 @@ mod tests {
             "\"usage_7d\""
         );
         assert_eq!(ComponentId::PullRequest.display_name(), "Pull Request");
+        assert_eq!(ComponentId::Git.display_name(), "Git Status");
+        assert_eq!(
+            ComponentId::Git.description(),
+            "Branch, file changes, upstream status, and optional SHA"
+        );
         assert_eq!(
             serde_json::to_string(&ComponentId::PullRequest).unwrap(),
             "\"pull_request\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ComponentId::Worktree).unwrap(),
+            "\"worktree\""
+        );
+    }
+
+    #[test]
+    fn worktree_outside_modes_cycle_in_editor_order() {
+        let mut mode = WorktreeOutside::Hide;
+        for expected in [
+            WorktreeOutside::Show,
+            WorktreeOutside::Branch,
+            WorktreeOutside::Directory,
+            WorktreeOutside::Hide,
+        ] {
+            mode = mode.toggled();
+            assert_eq!(mode, expected);
+        }
+        assert_eq!(WorktreeOutside::default(), WorktreeOutside::Branch);
+        assert_eq!(WorktreeOutside::Hide.component_name(), "Worktree");
+        assert_eq!(
+            WorktreeOutside::Show.component_name(),
+            "Worktree (Always Show)"
+        );
+        assert_eq!(
+            WorktreeOutside::Branch.component_name(),
+            "Worktree (or Branch)"
+        );
+        assert_eq!(
+            WorktreeOutside::Directory.component_name(),
+            "Worktree (or Directory)"
         );
     }
 }

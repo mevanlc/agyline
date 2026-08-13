@@ -50,6 +50,19 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
+                Worktree,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 139,
+                        g: 69,
+                        b: 19,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
                 Hostname,
                 ComponentColors {
                     icon: light(),

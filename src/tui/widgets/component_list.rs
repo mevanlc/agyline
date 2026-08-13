@@ -31,7 +31,7 @@ impl ComponentListWidget {
                 };
 
                 ListItem::new(Line::from(Span::styled(
-                    format!("{}[{}] {}", cursor, check, comp.id.display_name()),
+                    format!("{}[{}] {}", cursor, check, comp.display_name()),
                     style,
                 )))
             })

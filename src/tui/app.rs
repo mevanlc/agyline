@@ -1,9 +1,11 @@
 use crate::config::manager;
 use crate::config::theme::UserTheme;
 use crate::config::types::{
-    AnsiColor, ComponentId, DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS,
-    DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, PR_OPTION_OSC_HYPERLINKS,
+    AnsiColor, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
+    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
+    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
     PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode, USAGE_OPTION_VALUE, UsageValue,
+    WORKTREE_OPTION_OUTSIDE_WORKTREES, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 use crate::core::ring_cursor::RingCursor;
 use crate::data::icon_catalog::{IconCatalogData, IconPickerTab};
@@ -485,6 +487,51 @@ impl App {
                             self.name_input_open = true;
                             self.name_input_buffer = value;
                             self.name_input_purpose = NameInputPurpose::HostnameRstrip;
+                        }
+                        FieldSelection::WorktreeOutside => {
+                            let comp = &mut self.theme.components[self.selected_component];
+                            let mode = WorktreeOutside::from_options(&comp.options).toggled();
+                            comp.options.insert(
+                                WORKTREE_OPTION_OUTSIDE_WORKTREES.into(),
+                                mode.as_str().into(),
+                            );
+                            self.status_message =
+                                Some(format!("Outside worktrees: {}", mode.display_name()));
+                            self.mark_dirty();
+                        }
+                        FieldSelection::WorktreeOriginalBranch => {
+                            let comp = &mut self.theme.components[self.selected_component];
+                            let enabled = comp
+                                .options
+                                .get(WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH)
+                                .and_then(|value| value.as_bool())
+                                .unwrap_or(DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH);
+                            comp.options.insert(
+                                WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH.into(),
+                                serde_json::Value::Bool(!enabled),
+                            );
+                            self.status_message = Some(format!(
+                                "Worktree original branch {}",
+                                if enabled { "hidden" } else { "shown" }
+                            ));
+                            self.mark_dirty();
+                        }
+                        FieldSelection::GitAutohideBranch => {
+                            let comp = &mut self.theme.components[self.selected_component];
+                            let enabled = comp
+                                .options
+                                .get(GIT_OPTION_AUTOHIDE_BRANCH)
+                                .and_then(|value| value.as_bool())
+                                .unwrap_or(DEFAULT_GIT_AUTOHIDE_BRANCH);
+                            comp.options.insert(
+                                GIT_OPTION_AUTOHIDE_BRANCH.into(),
+                                serde_json::Value::Bool(!enabled),
+                            );
+                            self.status_message = Some(format!(
+                                "Git branch autohide {}",
+                                if enabled { "disabled" } else { "enabled" }
+                            ));
+                            self.mark_dirty();
                         }
                         FieldSelection::PrReviewState => {
                             let comp = &mut self.theme.components[self.selected_component];
@@ -1674,7 +1721,7 @@ impl App {
         // Main content: two columns
         let content = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Length(24), Constraint::Min(30)])
+            .constraints([Constraint::Length(31), Constraint::Min(30)])
             .split(layout[3]);
 
         ComponentListWidget::render(
@@ -1755,8 +1802,9 @@ mod tests {
     use super::{App, FieldSelection, Panel};
     use crate::config::theme::UserTheme;
     use crate::config::types::{
-        ComponentId, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
-        USAGE_OPTION_VALUE,
+        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
+        PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, USAGE_OPTION_VALUE,
+        WORKTREE_OPTION_OUTSIDE_WORKTREES, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH,
     };
 
     #[test]
@@ -1797,6 +1845,88 @@ mod tests {
                 Some(expected)
             );
         }
+    }
+
+    #[test]
+    fn worktree_editor_toggles_original_branch() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+        app.selected_component = app
+            .theme
+            .components
+            .iter()
+            .position(|component| component.id == ComponentId::Worktree)
+            .unwrap();
+        app.selected_panel.set(&Panel::Editor);
+        app.selected_field = FieldSelection::WorktreeOriginalBranch;
+
+        app.toggle_current();
+
+        assert_eq!(
+            app.theme.components[app.selected_component]
+                .options
+                .get(WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH)
+                .and_then(|value| value.as_bool()),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn worktree_editor_cycles_outside_worktree_modes() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+        app.selected_component = app
+            .theme
+            .components
+            .iter()
+            .position(|component| component.id == ComponentId::Worktree)
+            .unwrap();
+        app.selected_panel.set(&Panel::Editor);
+        app.selected_field = FieldSelection::WorktreeOutside;
+
+        for expected in ["directory", "hide", "show", "branch"] {
+            app.toggle_current();
+            assert_eq!(
+                app.theme.components[app.selected_component]
+                    .options
+                    .get(WORKTREE_OPTION_OUTSIDE_WORKTREES)
+                    .and_then(|value| value.as_str()),
+                Some(expected)
+            );
+        }
+    }
+
+    #[test]
+    fn git_status_editor_toggles_branch_autohide() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+        app.selected_component = app
+            .theme
+            .components
+            .iter()
+            .position(|component| component.id == ComponentId::Git)
+            .unwrap();
+        app.selected_panel.set(&Panel::Editor);
+        app.selected_field = FieldSelection::GitAutohideBranch;
+
+        app.toggle_current();
+
+        assert_eq!(
+            app.theme.components[app.selected_component]
+                .options
+                .get(GIT_OPTION_AUTOHIDE_BRANCH)
+                .and_then(|value| value.as_bool()),
+            Some(false)
+        );
     }
 
     #[test]

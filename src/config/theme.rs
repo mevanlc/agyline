@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::types::{
-    AnsiColor, ColorConfig, ComponentConfig, ComponentId, DEFAULT_HOSTNAME_RSTRIP,
-    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, IconConfig,
-    PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleConfig,
-    StyleMode, TextStyleConfig,
+    AnsiColor, ColorConfig, ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH,
+    DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE,
+    DEFAULT_PR_SHOW_URL, DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH,
+    IconConfig, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+    StyleConfig, StyleMode, TextStyleConfig, WORKTREE_OPTION_OUTSIDE_WORKTREES,
+    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 
 /// A complete user theme — settings + colors + icons for all components.
@@ -61,6 +63,31 @@ impl UserTheme {
                 options: Default::default(),
             },
             ComponentConfig {
+                id: Worktree,
+                enabled: true,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f333}".into(), // 🌳
+                    nerd_font: "\u{f1bb}".into(),
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 10 }),
+                    text: Some(AnsiColor::Color16 { c16: 10 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: std::collections::HashMap::from([
+                    (
+                        WORKTREE_OPTION_OUTSIDE_WORKTREES.into(),
+                        serde_json::Value::String(WorktreeOutside::default().as_str().into()),
+                    ),
+                    (
+                        WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH.into(),
+                        serde_json::Value::Bool(DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH),
+                    ),
+                ]),
+            },
+            ComponentConfig {
                 id: Hostname,
                 enabled: false,
                 icon: IconConfig {
@@ -81,7 +108,7 @@ impl UserTheme {
             },
             ComponentConfig {
                 id: Git,
-                enabled: true,
+                enabled: false,
                 icon: IconConfig {
                     per_model: None,
                     plain: "\u{1f33f}".into(), // 🌿
@@ -93,7 +120,10 @@ impl UserTheme {
                     background: None,
                 },
                 styles: TextStyleConfig { text_bold: false },
-                options: Default::default(),
+                options: std::collections::HashMap::from([(
+                    GIT_OPTION_AUTOHIDE_BRANCH.into(),
+                    serde_json::Value::Bool(DEFAULT_GIT_AUTOHIDE_BRANCH),
+                )]),
             },
             ComponentConfig {
                 id: PullRequest,
@@ -271,7 +301,14 @@ impl UserTheme {
                 .iter()
                 .find_map(|next| self.components.iter().position(|c| c.id == next.id))
                 .unwrap_or(self.components.len());
-            self.components.insert(insert_at, default.clone());
+            let mut addition = default.clone();
+            if addition.id == ComponentId::Worktree {
+                // Preserve the visible output of existing themes. Fresh themes
+                // enable Worktree instead of Git, but migration should not
+                // silently replace an existing theme's Git segment.
+                addition.enabled = false;
+            }
+            self.components.insert(insert_at, addition);
         }
     }
 
@@ -360,11 +397,41 @@ mod tests {
     }
 
     #[test]
+    fn test_worktree_replaces_git_in_fresh_themes_and_defaults_to_branch() {
+        let theme = UserTheme::default_theme();
+        let worktree = theme.get_component(ComponentId::Worktree).unwrap();
+        let git = theme.get_component(ComponentId::Git).unwrap();
+
+        assert!(worktree.enabled);
+        assert!(!git.enabled);
+        assert_eq!(
+            git.options
+                .get(GIT_OPTION_AUTOHIDE_BRANCH)
+                .and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            WorktreeOutside::from_options(&worktree.options),
+            WorktreeOutside::Branch
+        );
+        assert_eq!(worktree.display_name(), "Worktree (or Branch)");
+        assert_eq!(
+            worktree
+                .options
+                .get(WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH)
+                .and_then(|value| value.as_bool()),
+            Some(false)
+        );
+    }
+
+    #[test]
     fn test_add_missing_components_uses_default_order() {
         let mut theme = UserTheme::default_theme();
-        theme
-            .components
-            .retain(|c| c.id != ComponentId::Hostname && c.id != ComponentId::PullRequest);
+        theme.components.retain(|c| {
+            c.id != ComponentId::Worktree
+                && c.id != ComponentId::Hostname
+                && c.id != ComponentId::PullRequest
+        });
 
         theme.add_missing_components();
 
@@ -373,10 +440,25 @@ mod tests {
             .iter()
             .position(|c| c.id == ComponentId::Directory)
             .unwrap();
-        assert_eq!(theme.components[directory + 1].id, ComponentId::Hostname);
-        assert!(!theme.components[directory + 1].enabled);
+        let worktree = &theme.components[directory + 1];
+        assert_eq!(worktree.id, ComponentId::Worktree);
+        assert!(!worktree.enabled);
         assert_eq!(
-            theme.components[directory + 1]
+            WorktreeOutside::from_options(&worktree.options),
+            WorktreeOutside::Branch
+        );
+        assert_eq!(
+            worktree
+                .options
+                .get(WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH)
+                .and_then(|value| value.as_bool()),
+            Some(false)
+        );
+
+        assert_eq!(theme.components[directory + 2].id, ComponentId::Hostname);
+        assert!(!theme.components[directory + 2].enabled);
+        assert_eq!(
+            theme.components[directory + 2]
                 .options
                 .get("rstrip")
                 .and_then(|value| value.as_str()),

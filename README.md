@@ -5,7 +5,10 @@
 - keyboard-driven TUI editor built with `ratatui`
 - starter themes written automatically on first run
 - plain, Nerd Font, emoji, and powerline-style rendering
-- configurable components for model, directory, hostname, git, pull requests, native context-window usage, separate five-hour and seven-day Claude rate limits, cost, session, and output style
+- configurable components for model, directory, worktree, hostname, git, pull requests, native context-window usage, separate five-hour and seven-day Claude rate limits, cost, session, and output style
+- worktree-aware identity display with configurable Hide, Show, Branch, or Directory behavior outside worktrees, plus an optional original-branch field
+- fresh themes enable Worktree with the Branch fallback and leave the richer Git status component disabled
+- Git Status shows branch, file-change and upstream state, and optional SHA; branch autohiding removes duplication with another visible branch field
 - pull-request number display with optional review state, URL, and separate OSC 8 hyperlinks for every visible PR field
 - configurable comma-separated suffix stripping for displayed hostnames
 

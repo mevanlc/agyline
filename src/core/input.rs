@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub struct InputData {
     pub model: Model,
     pub workspace: Workspace,
+    pub worktree: Option<Worktree>,
     pub effort: Option<Effort>,
     pub thinking: Option<Thinking>,
     pub context_window: Option<ContextWindow>,
@@ -22,6 +23,16 @@ pub struct Model {
 #[derive(Deserialize)]
 pub struct Workspace {
     pub current_dir: String,
+    pub git_worktree: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct Worktree {
+    pub name: String,
+    pub path: String,
+    pub branch: Option<String>,
+    pub original_cwd: String,
+    pub original_branch: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -90,11 +101,21 @@ mod tests {
     use super::InputData;
 
     #[test]
-    fn deserializes_native_context_rate_limit_and_pull_request_payloads() {
+    fn deserializes_native_context_rate_limit_pull_request_and_worktree_payloads() {
         let input: InputData = serde_json::from_str(
             r#"{
                 "model": {"id": "claude-sonnet-4-5", "display_name": "Sonnet 4.5"},
-                "workspace": {"current_dir": "/tmp/project"},
+                "workspace": {
+                    "current_dir": "/tmp/project/.claude/worktrees/refactor",
+                    "git_worktree": "refactor"
+                },
+                "worktree": {
+                    "name": "refactor",
+                    "path": "/tmp/project/.claude/worktrees/refactor",
+                    "branch": "worktree-refactor",
+                    "original_cwd": "/tmp/project",
+                    "original_branch": "main"
+                },
                 "effort": null,
                 "thinking": null,
                 "context_window": {
@@ -140,5 +161,11 @@ mod tests {
         assert_eq!(pr.number, 482);
         assert_eq!(pr.url, "https://github.com/example/repo/pull/482");
         assert_eq!(pr.review_state.as_deref(), Some("approved"));
+
+        assert_eq!(input.workspace.git_worktree.as_deref(), Some("refactor"));
+        let worktree = input.worktree.unwrap();
+        assert_eq!(worktree.name, "refactor");
+        assert_eq!(worktree.branch.as_deref(), Some("worktree-refactor"));
+        assert_eq!(worktree.original_branch.as_deref(), Some("main"));
     }
 }

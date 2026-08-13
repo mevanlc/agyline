@@ -5,8 +5,9 @@ use ratatui::text::Span;
 use unicode_width::UnicodeWidthStr;
 
 use crate::config::types::{
-    AnsiColor, ComponentConfig, ComponentId, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
-    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode, UsageValue,
+    AnsiColor, ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH,
+    DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, GIT_OPTION_AUTOHIDE_BRANCH,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode, UsageValue, WorktreeOutside,
 };
 
 const POWERLINE_SEPARATOR_GLYPH: &str = "\u{e0b0}";
@@ -236,8 +237,9 @@ pub fn demo_texts_full() -> HashMap<ComponentId, SegmentText> {
     HashMap::from([
         (ComponentId::Model, ("Sonnet 4.5".into(), String::new())),
         (ComponentId::Directory, ("project".into(), String::new())),
+        (ComponentId::Worktree, ("refactor".into(), String::new())),
         (ComponentId::Hostname, ("workstation".into(), String::new())),
-        (ComponentId::Git, ("main \u{2713}".into(), String::new())),
+        (ComponentId::Git, ("main".into(), "\u{2713}".into())),
         (ComponentId::PullRequest, ("#482".into(), "approved".into())),
         (
             ComponentId::ContextWindow,
@@ -266,6 +268,45 @@ pub fn demo_texts_for_components(
         };
         let percentage = UsageValue::from_options(&usage.options).apply(used);
         texts.insert(id, (format!("{label} {percentage:.0}%"), String::new()));
+    }
+
+    let mut worktree_displays_branch = false;
+    if let Some(worktree) = components
+        .iter()
+        .find(|component| component.id == ComponentId::Worktree)
+    {
+        match WorktreeOutside::from_options(&worktree.options) {
+            WorktreeOutside::Hide => {
+                texts.remove(&ComponentId::Worktree);
+            }
+            WorktreeOutside::Show => {
+                texts.insert(ComponentId::Worktree, ("-".into(), String::new()));
+            }
+            WorktreeOutside::Branch => {
+                texts.insert(ComponentId::Worktree, ("main".into(), String::new()));
+                worktree_displays_branch = worktree.enabled;
+            }
+            WorktreeOutside::Directory => {
+                texts.insert(ComponentId::Worktree, ("project".into(), String::new()));
+            }
+        }
+    }
+
+    let git_autohides_branch = components
+        .iter()
+        .find(|component| component.id == ComponentId::Git)
+        .is_some_and(|git| {
+            git.options
+                .get(GIT_OPTION_AUTOHIDE_BRANCH)
+                .and_then(|value| value.as_bool())
+                .unwrap_or(DEFAULT_GIT_AUTOHIDE_BRANCH)
+        });
+    if worktree_displays_branch
+        && git_autohides_branch
+        && let Some((primary, secondary)) = texts.get_mut(&ComponentId::Git)
+        && primary == "main"
+    {
+        *primary = std::mem::take(secondary);
     }
 
     let Some(pull_request) = components
@@ -304,8 +345,9 @@ pub fn demo_texts_compact() -> HashMap<ComponentId, SegmentText> {
     HashMap::from([
         (ComponentId::Model, ("Model".into(), String::new())),
         (ComponentId::Directory, ("prj".into(), String::new())),
+        (ComponentId::Worktree, ("wt".into(), String::new())),
         (ComponentId::Hostname, ("host".into(), String::new())),
-        (ComponentId::Git, ("main \u{2713}".into(), String::new())),
+        (ComponentId::Git, ("main".into(), "\u{2713}".into())),
         (ComponentId::PullRequest, ("#482".into(), String::new())),
         (ComponentId::ContextWindow, ("12%".into(), String::new())),
         (ComponentId::UsageFiveHour, ("5h 23%".into(), String::new())),
@@ -622,7 +664,8 @@ mod tests {
 
     use crate::config::theme::UserTheme;
     use crate::config::types::{
-        ComponentId, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode,
+        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+        StyleMode, WORKTREE_OPTION_OUTSIDE_WORKTREES, WorktreeOutside,
     };
 
     use super::{
@@ -649,6 +692,75 @@ mod tests {
                 "#482".into(),
                 "https://github.com/example/repo/pull/482".into()
             ))
+        );
+    }
+
+    #[test]
+    fn worktree_demo_tracks_the_outside_worktrees_mode() {
+        let mut theme = UserTheme::default_theme();
+        for (mode, expected) in [
+            (WorktreeOutside::Hide, None),
+            (WorktreeOutside::Show, Some("-")),
+            (WorktreeOutside::Branch, Some("main")),
+            (WorktreeOutside::Directory, Some("project")),
+        ] {
+            theme
+                .get_component_mut(ComponentId::Worktree)
+                .unwrap()
+                .options
+                .insert(
+                    WORKTREE_OPTION_OUTSIDE_WORKTREES.into(),
+                    mode.as_str().into(),
+                );
+
+            let texts = demo_texts_for_components(&theme.components);
+            assert_eq!(
+                texts
+                    .get(&ComponentId::Worktree)
+                    .map(|(primary, _)| primary.as_str()),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn git_demo_autohides_only_a_branch_displayed_by_worktree() {
+        let mut theme = UserTheme::default_theme();
+        theme.get_component_mut(ComponentId::Git).unwrap().enabled = true;
+
+        let texts = demo_texts_for_components(&theme.components);
+        assert_eq!(
+            texts.get(&ComponentId::Git),
+            Some(&("\u{2713}".into(), String::new()))
+        );
+
+        theme
+            .get_component_mut(ComponentId::Git)
+            .unwrap()
+            .options
+            .insert(GIT_OPTION_AUTOHIDE_BRANCH.into(), false.into());
+        let texts = demo_texts_for_components(&theme.components);
+        assert_eq!(
+            texts.get(&ComponentId::Git),
+            Some(&("main".into(), "\u{2713}".into()))
+        );
+
+        theme
+            .get_component_mut(ComponentId::Git)
+            .unwrap()
+            .options
+            .insert(
+                GIT_OPTION_AUTOHIDE_BRANCH.into(),
+                serde_json::Value::Bool(true),
+            );
+        theme
+            .get_component_mut(ComponentId::Worktree)
+            .unwrap()
+            .enabled = false;
+        let texts = demo_texts_for_components(&theme.components);
+        assert_eq!(
+            texts.get(&ComponentId::Git),
+            Some(&("main".into(), "\u{2713}".into()))
         );
     }
 

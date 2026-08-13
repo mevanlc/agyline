@@ -21,6 +21,13 @@ pub fn icon_set() -> IconSet {
                 },
             ), // 📂 / 󰚝 md-folder_star
             (
+                Worktree,
+                ComponentIcons {
+                    plain: "\u{1f332}",
+                    nerd_font: "\u{f1bb}",
+                },
+            ), // 🌲 /  fa-tree
+            (
                 Hostname,
                 ComponentIcons {
                     plain: "\u{1f5a5}\u{fe0f}",

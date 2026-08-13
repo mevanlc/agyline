@@ -1,10 +1,12 @@
 use crate::config::theme::UserTheme;
 use crate::config::types::{
-    ComponentConfig, ComponentId, DEFAULT_HOSTNAME_RSTRIP, DEFAULT_PR_OSC_HYPERLINKS,
-    DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL, PR_OPTION_OSC_HYPERLINKS,
+    ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
+    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
+    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
     PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, UsageValue,
+    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
-use crate::core::components::ComponentData;
+use crate::core::components::{ComponentData, METADATA_DISPLAYED_BRANCH};
 use crate::core::render;
 
 pub struct StatusLineGenerator<'a> {
@@ -71,6 +73,17 @@ pub fn collect_all_components(
                     .collect(input)
             }
             ComponentId::Directory => DirectoryComponent::new().collect(input),
+            ComponentId::Worktree => {
+                let show_original_branch = comp_cfg
+                    .options
+                    .get(WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH)
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH);
+                WorktreeComponent::new()
+                    .with_original_branch(show_original_branch)
+                    .with_outside_worktrees(WorktreeOutside::from_options(&comp_cfg.options))
+                    .collect(input)
+            }
             ComponentId::Hostname => {
                 let rstrip = comp_cfg
                     .options
@@ -127,7 +140,36 @@ pub fn collect_all_components(
         }
     }
 
+    autohide_duplicate_git_branch(&mut results);
     results
+}
+
+fn autohide_duplicate_git_branch(components: &mut [(ComponentConfig, ComponentData)]) {
+    let displayed_branches: Vec<String> = components
+        .iter()
+        .filter(|(config, _)| config.id != ComponentId::Git)
+        .filter_map(|(_, data)| data.metadata.get(METADATA_DISPLAYED_BRANCH).cloned())
+        .collect();
+
+    let Some((config, data)) = components
+        .iter_mut()
+        .find(|(config, _)| config.id == ComponentId::Git)
+    else {
+        return;
+    };
+    let autohide = config
+        .options
+        .get(GIT_OPTION_AUTOHIDE_BRANCH)
+        .and_then(|value| value.as_bool())
+        .unwrap_or(DEFAULT_GIT_AUTOHIDE_BRANCH);
+
+    if autohide
+        && displayed_branches
+            .iter()
+            .any(|branch| branch == &data.primary)
+    {
+        data.primary = std::mem::take(&mut data.secondary);
+    }
 }
 
 #[cfg(test)]
@@ -135,9 +177,12 @@ mod tests {
     use super::{StatusLineGenerator, collect_all_components};
     use crate::config::theme::UserTheme;
     use crate::config::types::{
-        ComponentId, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
+        PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, WORKTREE_OPTION_OUTSIDE_WORKTREES,
+        WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH,
     };
     use crate::core::input::InputData;
+    use std::process::Command;
 
     const URL: &str = "https://github.com/example/repo/pull/482";
 
@@ -198,5 +243,113 @@ mod tests {
 
         assert_eq!(rendered, format!("#482 approved {URL}"));
         assert!(!rendered.contains("\x1b]8;;"));
+    }
+
+    #[test]
+    fn worktree_is_absent_in_primary_checkout_and_can_show_original_branch() {
+        let mut theme = UserTheme::default_theme();
+        for component in &mut theme.components {
+            component.enabled = false;
+        }
+        let worktree = theme.get_component_mut(ComponentId::Worktree).unwrap();
+        worktree.enabled = true;
+        worktree.icon.plain.clear();
+        worktree.colors.icon = None;
+        worktree.colors.text = None;
+        worktree.options.insert(
+            WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH.into(),
+            serde_json::Value::Bool(true),
+        );
+
+        let primary = serde_json::from_value(serde_json::json!({
+            "model": {"id": "sonnet", "display_name": "Sonnet"},
+            "workspace": {"current_dir": "/tmp/project"}
+        }))
+        .unwrap();
+        assert!(collect_all_components(&theme, &primary).is_empty());
+
+        let linked = serde_json::from_value(serde_json::json!({
+            "model": {"id": "sonnet", "display_name": "Sonnet"},
+            "workspace": {
+                "current_dir": "/tmp/project/.claude/worktrees/physical-name",
+                "git_worktree": "physical-name1"
+            },
+            "worktree": {
+                "name": "logical-name",
+                "path": "/tmp/project/.claude/worktrees/physical-name",
+                "branch": "worktree-logical-name",
+                "original_cwd": "/tmp/project",
+                "original_branch": "main"
+            }
+        }))
+        .unwrap();
+        let components = collect_all_components(&theme, &linked);
+        let rendered = StatusLineGenerator::new(&theme).generate(components);
+        assert_eq!(rendered, "logical-name \u{2190} main");
+    }
+
+    #[test]
+    fn git_autohides_only_a_duplicate_branch_field() {
+        let repo = tempfile::tempdir().unwrap();
+        let status = Command::new("git")
+            .args(["init", "--quiet", "--initial-branch=topic"])
+            .current_dir(repo.path())
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let input = serde_json::from_value(serde_json::json!({
+            "model": {"id": "sonnet", "display_name": "Sonnet"},
+            "workspace": {"current_dir": repo.path()}
+        }))
+        .unwrap();
+
+        let mut theme = UserTheme::default_theme();
+        for component in &mut theme.components {
+            component.enabled = matches!(component.id, ComponentId::Worktree | ComponentId::Git);
+        }
+
+        let components = collect_all_components(&theme, &input);
+        let worktree = components
+            .iter()
+            .find(|(config, _)| config.id == ComponentId::Worktree)
+            .unwrap();
+        let git = components
+            .iter()
+            .find(|(config, _)| config.id == ComponentId::Git)
+            .unwrap();
+        assert_eq!(worktree.1.primary, "topic");
+        assert_eq!(git.1.primary, "\u{2713}");
+        assert!(git.1.secondary.is_empty());
+
+        theme
+            .get_component_mut(ComponentId::Git)
+            .unwrap()
+            .options
+            .insert(GIT_OPTION_AUTOHIDE_BRANCH.into(), false.into());
+        let components = collect_all_components(&theme, &input);
+        let git = components
+            .iter()
+            .find(|(config, _)| config.id == ComponentId::Git)
+            .unwrap();
+        assert_eq!(git.1.primary, "topic");
+        assert_eq!(git.1.secondary, "\u{2713}");
+
+        theme
+            .get_component_mut(ComponentId::Git)
+            .unwrap()
+            .options
+            .insert(GIT_OPTION_AUTOHIDE_BRANCH.into(), true.into());
+        theme
+            .get_component_mut(ComponentId::Worktree)
+            .unwrap()
+            .options
+            .insert(WORKTREE_OPTION_OUTSIDE_WORKTREES.into(), "directory".into());
+        let components = collect_all_components(&theme, &input);
+        let git = components
+            .iter()
+            .find(|(config, _)| config.id == ComponentId::Git)
+            .unwrap();
+        assert_eq!(git.1.primary, "topic");
+        assert_eq!(git.1.secondary, "\u{2713}");
     }
 }

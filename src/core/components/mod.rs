@@ -8,10 +8,13 @@ pub mod output_style;
 pub mod pull_request;
 pub mod session;
 pub mod usage;
+pub mod worktree;
 
 use crate::config::types::ComponentId;
 use crate::core::input::InputData;
 use std::collections::HashMap;
+
+pub const METADATA_DISPLAYED_BRANCH: &str = "displayed_branch";
 
 /// A component that collects data from [`InputData`] for display in the status line.
 ///
@@ -44,3 +47,4 @@ pub use output_style::OutputStyleComponent;
 pub use pull_request::PullRequestComponent;
 pub use session::SessionComponent;
 pub use usage::{FiveHourUsageComponent, SevenDayUsageComponent};
+pub use worktree::WorktreeComponent;

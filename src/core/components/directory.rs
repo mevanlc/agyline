@@ -11,7 +11,8 @@ impl DirectoryComponent {
         Self
     }
 
-    fn extract_directory_name(path: &str) -> String {
+    pub(crate) fn directory_name(path: &str) -> String {
+        let path = path.trim_end_matches(['/', '\\']);
         let unix_name = path.split('/').next_back().unwrap_or("");
         let windows_name = path.split('\\').next_back().unwrap_or("");
 
@@ -33,7 +34,7 @@ impl DirectoryComponent {
 
 impl Component for DirectoryComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
-        let dir_name = Self::extract_directory_name(&input.workspace.current_dir);
+        let dir_name = Self::directory_name(&input.workspace.current_dir);
 
         let mut metadata = HashMap::new();
         metadata.insert("full_path".into(), input.workspace.current_dir.clone());

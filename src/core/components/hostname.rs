@@ -74,7 +74,9 @@ mod tests {
             },
             workspace: Workspace {
                 current_dir: "/tmp".into(),
+                git_worktree: None,
             },
+            worktree: None,
             effort: None,
             thinking: None,
             context_window: None,

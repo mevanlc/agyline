@@ -45,6 +45,23 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
+                Worktree,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 160,
+                        g: 186,
+                        b: 214,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 160,
+                        g: 186,
+                        b: 214,
+                    }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
                 Hostname,
                 ComponentColors {
                     icon: Some(AnsiColor::Rgb {

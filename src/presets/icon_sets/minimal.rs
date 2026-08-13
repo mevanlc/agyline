@@ -21,6 +21,13 @@ pub fn icon_set() -> IconSet {
                 },
             ), // ◐
             (
+                Worktree,
+                ComponentIcons {
+                    plain: "W",
+                    nerd_font: "\u{f1bb}",
+                },
+            ),
+            (
                 Hostname,
                 ComponentIcons {
                     plain: "@",

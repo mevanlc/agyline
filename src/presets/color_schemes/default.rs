@@ -28,6 +28,15 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
+                Worktree,
+                ComponentColors {
+                    icon: Some(C { c16: 11 }),
+                    text: Some(C { c16: 10 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
                 Hostname,
                 ComponentColors {
                     icon: Some(C { c16: 12 }),
