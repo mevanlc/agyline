@@ -1362,8 +1362,21 @@ impl App {
     // --- Icon picker ---
 
     fn open_icon_picker(&mut self, purpose: IconPickerPurpose) {
+        let is_nerd_style = matches!(
+            self.theme.style.mode,
+            StyleMode::NerdFont | StyleMode::Powerline
+        );
         let initial_tab = match purpose {
             IconPickerPurpose::NerdFontIcon => IconPickerTab::NerdFont,
+            IconPickerPurpose::OpusIcon
+            | IconPickerPurpose::SonnetIcon
+            | IconPickerPurpose::HaikuIcon
+            | IconPickerPurpose::FableIcon
+            | IconPickerPurpose::MythosIcon
+                if is_nerd_style =>
+            {
+                IconPickerTab::NerdFont
+            }
             _ => IconPickerTab::Emoji,
         };
 
@@ -1378,31 +1391,31 @@ impl App {
                     .and_then(|v| v.as_str())
                     .unwrap_or_default()
                     .to_string(),
-                IconPickerPurpose::OpusIcon => comp
-                    .icon
-                    .per_model
-                    .as_ref()
-                    .map_or(String::new(), |p| p.opus.clone()),
-                IconPickerPurpose::SonnetIcon => comp
-                    .icon
-                    .per_model
-                    .as_ref()
-                    .map_or(String::new(), |p| p.sonnet.clone()),
-                IconPickerPurpose::HaikuIcon => comp
-                    .icon
-                    .per_model
-                    .as_ref()
-                    .map_or(String::new(), |p| p.haiku.clone()),
-                IconPickerPurpose::FableIcon => comp
-                    .icon
-                    .per_model
-                    .as_ref()
-                    .map_or(String::new(), |p| p.fable.clone()),
-                IconPickerPurpose::MythosIcon => comp
-                    .icon
-                    .per_model
-                    .as_ref()
-                    .map_or(String::new(), |p| p.mythos.clone()),
+                IconPickerPurpose::OpusIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.opus.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
+                IconPickerPurpose::SonnetIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.sonnet.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
+                IconPickerPurpose::HaikuIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.haiku.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
+                IconPickerPurpose::FableIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.fable.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
+                IconPickerPurpose::MythosIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.mythos.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
             }
         } else {
             String::new()
@@ -1637,32 +1650,37 @@ impl App {
                     "Thinking icon"
                 }
                 IconPickerPurpose::OpusIcon => {
+                    let mode = self.theme.style.mode;
                     if let Some(pm) = comp.icon.per_model.as_mut() {
-                        pm.opus = icon_str;
+                        *pm.opus.for_mode_mut(mode) = icon_str;
                     }
                     "Opus icon"
                 }
                 IconPickerPurpose::SonnetIcon => {
+                    let mode = self.theme.style.mode;
                     if let Some(pm) = comp.icon.per_model.as_mut() {
-                        pm.sonnet = icon_str;
+                        *pm.sonnet.for_mode_mut(mode) = icon_str;
                     }
                     "Sonnet icon"
                 }
                 IconPickerPurpose::HaikuIcon => {
+                    let mode = self.theme.style.mode;
                     if let Some(pm) = comp.icon.per_model.as_mut() {
-                        pm.haiku = icon_str;
+                        *pm.haiku.for_mode_mut(mode) = icon_str;
                     }
                     "Haiku icon"
                 }
                 IconPickerPurpose::FableIcon => {
+                    let mode = self.theme.style.mode;
                     if let Some(pm) = comp.icon.per_model.as_mut() {
-                        pm.fable = icon_str;
+                        *pm.fable.for_mode_mut(mode) = icon_str;
                     }
                     "Fable icon"
                 }
                 IconPickerPurpose::MythosIcon => {
+                    let mode = self.theme.style.mode;
                     if let Some(pm) = comp.icon.per_model.as_mut() {
-                        pm.mythos = icon_str;
+                        *pm.mythos.for_mode_mut(mode) = icon_str;
                     }
                     "Mythos icon"
                 }
@@ -1960,5 +1978,55 @@ mod tests {
             app.toggle_current();
             assert_eq!(value(&app).as_deref(), Some("used"));
         }
+    }
+
+    #[test]
+    fn per_model_icons_update_per_style_mode() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+        app.selected_component = app
+            .theme
+            .components
+            .iter()
+            .position(|component| component.id == ComponentId::Model)
+            .unwrap();
+
+        // StyleMode::Plain is default
+        assert_eq!(app.theme.style.mode, crate::config::types::StyleMode::Plain);
+        let model = &mut app.theme.components[app.selected_component];
+        let pm = model.icon.per_model.as_mut().unwrap();
+        pm.opus.plain = "🐙".into();
+        pm.opus.nerd_font = "󰏒".into();
+
+        // Pick icon in Plain mode updates plain variant
+        app.theme.style.mode = crate::config::types::StyleMode::Plain;
+        app.icon_picker.purpose = crate::tui::app::IconPickerPurpose::OpusIcon;
+        app.icon_picker
+            .tab
+            .set(&crate::data::icon_catalog::IconPickerTab::Custom);
+        app.icon_picker.custom_buffer = "🦑".into();
+        app.apply_icon_picker_selection();
+
+        let model = &app.theme.components[app.selected_component];
+        let pm = model.icon.per_model.as_ref().unwrap();
+        assert_eq!(pm.opus.plain, "🦑");
+        assert_eq!(pm.opus.nerd_font, "󰏒");
+
+        // Pick icon in NerdFont mode updates nerd_font variant
+        app.theme.style.mode = crate::config::types::StyleMode::NerdFont;
+        app.icon_picker.purpose = crate::tui::app::IconPickerPurpose::OpusIcon;
+        app.icon_picker
+            .tab
+            .set(&crate::data::icon_catalog::IconPickerTab::Custom);
+        app.icon_picker.custom_buffer = "🦅".into();
+        app.apply_icon_picker_selection();
+
+        let model = &app.theme.components[app.selected_component];
+        let pm = model.icon.per_model.as_ref().unwrap();
+        assert_eq!(pm.opus.plain, "🦑");
+        assert_eq!(pm.opus.nerd_font, "🦅");
     }
 }

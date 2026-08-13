@@ -375,12 +375,33 @@ pub fn texts_and_icons_from_data(
     HashMap<ComponentId, SegmentText>,
     HashMap<ComponentId, String>,
 ) {
+    texts_and_icons_from_data_for_mode(data, StyleMode::Plain)
+}
+
+/// Build a texts map that carries dynamic_icon metadata for a specific style mode.
+pub fn texts_and_icons_from_data_for_mode(
+    data: &[(ComponentConfig, crate::core::components::ComponentData)],
+    mode: StyleMode,
+) -> (
+    HashMap<ComponentId, SegmentText>,
+    HashMap<ComponentId, String>,
+) {
     let mut texts = HashMap::new();
     let mut icons = HashMap::new();
     for (cfg, d) in data {
         texts.insert(cfg.id, (d.primary.clone(), d.secondary.clone()));
-        if let Some(dynamic) = d.metadata.get("dynamic_icon") {
-            icons.insert(cfg.id, dynamic.clone());
+        let dynamic = match mode {
+            StyleMode::Plain | StyleMode::PlainPowerline => d
+                .metadata
+                .get("dynamic_icon_plain")
+                .or_else(|| d.metadata.get("dynamic_icon")),
+            StyleMode::NerdFont | StyleMode::Powerline => d
+                .metadata
+                .get("dynamic_icon_nerd_font")
+                .or_else(|| d.metadata.get("dynamic_icon")),
+        };
+        if let Some(icon) = dynamic {
+            icons.insert(cfg.id, icon.clone());
         }
     }
     (texts, icons)

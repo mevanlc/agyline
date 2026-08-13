@@ -100,7 +100,7 @@ impl Component for ModelComponent {
             && pm.enabled
         {
             let model_id = input.model.id.to_ascii_lowercase();
-            let icon = if model_id.contains("mythos") {
+            let tier = if model_id.contains("mythos") {
                 &pm.mythos
             } else if model_id.contains("fable") {
                 &pm.fable
@@ -111,8 +111,11 @@ impl Component for ModelComponent {
             } else {
                 &pm.sonnet
             };
-            if !icon.is_empty() {
-                metadata.insert("dynamic_icon".into(), icon.clone());
+            if !tier.plain.is_empty() {
+                metadata.insert("dynamic_icon_plain".into(), tier.plain.clone());
+            }
+            if !tier.nerd_font.is_empty() {
+                metadata.insert("dynamic_icon_nerd_font".into(), tier.nerd_font.clone());
             }
         }
 

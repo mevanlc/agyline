@@ -19,7 +19,8 @@ impl<'a> StatusLineGenerator<'a> {
     }
 
     pub fn generate(&self, components: Vec<(ComponentConfig, ComponentData)>) -> String {
-        let (texts, dynamic_icons) = render::texts_and_icons_from_data(&components);
+        let (texts, dynamic_icons) =
+            render::texts_and_icons_from_data_for_mode(&components, self.theme.style.mode);
 
         // Build the render line, then patch in any dynamic icon overrides
         let mut line =

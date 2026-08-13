@@ -273,27 +273,37 @@ impl EditorWidget {
                 ),
                 FieldSelection::OpusIcon => (
                     "Opus Icon",
-                    pm.map_or(String::new(), |p| p.opus.clone()),
+                    pm.map_or(String::new(), |p| {
+                        p.opus.for_mode(theme.style.mode).to_string()
+                    }),
                     None,
                 ),
                 FieldSelection::FableIcon => (
                     "Fable Icon",
-                    pm.map_or(String::new(), |p| p.fable.clone()),
+                    pm.map_or(String::new(), |p| {
+                        p.fable.for_mode(theme.style.mode).to_string()
+                    }),
                     None,
                 ),
                 FieldSelection::MythosIcon => (
                     "Mythos Icon",
-                    pm.map_or(String::new(), |p| p.mythos.clone()),
+                    pm.map_or(String::new(), |p| {
+                        p.mythos.for_mode(theme.style.mode).to_string()
+                    }),
                     None,
                 ),
                 FieldSelection::SonnetIcon => (
                     "Sonnet Icon",
-                    pm.map_or(String::new(), |p| p.sonnet.clone()),
+                    pm.map_or(String::new(), |p| {
+                        p.sonnet.for_mode(theme.style.mode).to_string()
+                    }),
                     None,
                 ),
                 FieldSelection::HaikuIcon => (
                     "Haiku Icon",
-                    pm.map_or(String::new(), |p| p.haiku.clone()),
+                    pm.map_or(String::new(), |p| {
+                        p.haiku.for_mode(theme.style.mode).to_string()
+                    }),
                     None,
                 ),
                 FieldSelection::IconColor => (

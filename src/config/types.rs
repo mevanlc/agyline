@@ -284,26 +284,94 @@ impl Default for StyleConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModelTierIcons {
+    pub plain: String,
+    pub nerd_font: String,
+}
+
+impl ModelTierIcons {
+    pub fn new(plain: impl Into<String>, nerd_font: impl Into<String>) -> Self {
+        Self {
+            plain: plain.into(),
+            nerd_font: nerd_font.into(),
+        }
+    }
+
+    pub fn for_mode(&self, mode: StyleMode) -> &str {
+        match mode {
+            StyleMode::Plain | StyleMode::PlainPowerline => &self.plain,
+            StyleMode::NerdFont | StyleMode::Powerline => &self.nerd_font,
+        }
+    }
+
+    pub fn for_mode_mut(&mut self, mode: StyleMode) -> &mut String {
+        match mode {
+            StyleMode::Plain | StyleMode::PlainPowerline => &mut self.plain,
+            StyleMode::NerdFont | StyleMode::Powerline => &mut self.nerd_font,
+        }
+    }
+}
+
+impl Serialize for ModelTierIcons {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if self.plain == self.nerd_font {
+            serializer.serialize_str(&self.plain)
+        } else {
+            use serde::ser::SerializeStruct;
+            let mut state = serializer.serialize_struct("ModelTierIcons", 2)?;
+            state.serialize_field("plain", &self.plain)?;
+            state.serialize_field("nerd_font", &self.nerd_font)?;
+            state.end()
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for ModelTierIcons {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Helper {
+            Single(String),
+            Detailed { plain: String, nerd_font: String },
+        }
+
+        match Helper::deserialize(deserializer)? {
+            Helper::Single(s) => Ok(ModelTierIcons {
+                plain: s.clone(),
+                nerd_font: s,
+            }),
+            Helper::Detailed { plain, nerd_font } => Ok(ModelTierIcons { plain, nerd_font }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct PerModelIcons {
     pub enabled: bool,
-    pub opus: String,
-    pub sonnet: String,
-    pub haiku: String,
-    pub fable: String,
-    pub mythos: String,
+    pub opus: ModelTierIcons,
+    pub sonnet: ModelTierIcons,
+    pub haiku: ModelTierIcons,
+    pub fable: ModelTierIcons,
+    pub mythos: ModelTierIcons,
 }
 
 impl Default for PerModelIcons {
     fn default() -> Self {
         Self {
             enabled: true,
-            opus: "\u{1f419}".into(),           // 🐙
-            sonnet: "\u{1f3b6}".into(),         // 🎶
-            haiku: "\u{1f338}".into(),          // 🌸
-            fable: "\u{1f52e}".into(),          // 🔮
-            mythos: "\u{1f6e1}\u{fe0f}".into(), // 🛡️
+            opus: ModelTierIcons::new("\u{1f989}", "\u{f03d2}"), // 🦉 / 󰏒 md-owl
+            sonnet: ModelTierIcons::new("\u{1f3ad}", "\u{eeb6}"), // 🎭 /  fa-masks_theater
+            haiku: ModelTierIcons::new("\u{1f338}", "\u{f024a}"), // 🌸 / 󰉊 md-flower
+            fable: ModelTierIcons::new("\u{1f52e}", "\u{f0b2f}"), // 🔮 / 󰬯 md-crystal_ball
+            mythos: ModelTierIcons::new("\u{1f451}", "\u{edeb}"), // 👑 /  fa-crown
         }
     }
 }
@@ -396,7 +464,7 @@ impl ComponentConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::{ComponentId, WorktreeOutside};
+    use super::*;
 
     #[test]
     fn component_labels_and_config_ids_are_stable() {
@@ -452,5 +520,30 @@ mod tests {
             WorktreeOutside::Directory.component_name(),
             "Worktree (or Directory)"
         );
+    }
+
+    #[test]
+    fn model_tier_icons_deserializes_single_and_detailed_forms() {
+        let single_toml = r#"
+            opus = "🐙"
+            sonnet = { plain = "🎶", nerd_font = "󰏒" }
+        "#;
+
+        #[derive(Deserialize)]
+        struct TestConfig {
+            opus: ModelTierIcons,
+            sonnet: ModelTierIcons,
+        }
+
+        let cfg: TestConfig = toml::from_str(single_toml).unwrap();
+        assert_eq!(cfg.opus.plain, "🐙");
+        assert_eq!(cfg.opus.nerd_font, "🐙");
+        assert_eq!(cfg.sonnet.plain, "🎶");
+        assert_eq!(cfg.sonnet.nerd_font, "󰏒");
+
+        assert_eq!(cfg.opus.for_mode(StyleMode::Plain), "🐙");
+        assert_eq!(cfg.opus.for_mode(StyleMode::NerdFont), "🐙");
+        assert_eq!(cfg.sonnet.for_mode(StyleMode::Plain), "🎶");
+        assert_eq!(cfg.sonnet.for_mode(StyleMode::NerdFont), "󰏒");
     }
 }
