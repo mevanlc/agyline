@@ -388,8 +388,19 @@ impl App {
                 }
             }
             KeyCode::Char(' ') | KeyCode::Enter => self.toggle_current(),
-            KeyCode::Left | KeyCode::Right => {
-                self.selected_panel.move_next();
+            KeyCode::Left => {
+                if modifiers.contains(KeyModifiers::SHIFT) {
+                    self.switch_theme(-1);
+                } else {
+                    self.selected_panel.move_next();
+                }
+            }
+            KeyCode::Right => {
+                if modifiers.contains(KeyModifiers::SHIFT) {
+                    self.switch_theme(1);
+                } else {
+                    self.selected_panel.move_next();
+                }
             }
             KeyCode::Char('a') | KeyCode::Char('A') => self.switch_theme(-1),
             KeyCode::Char('d') | KeyCode::Char('D') => self.switch_theme(1),
