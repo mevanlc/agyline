@@ -32,6 +32,10 @@ pub enum FieldSelection {
     PerModelIcons,
     EffortLevel,
     ThinkingIcon,
+    FlashIcon,
+    ProIcon,
+    UltraIcon,
+    FlashLiteIcon,
     OpusIcon,
     SonnetIcon,
     HaikuIcon,
@@ -54,11 +58,15 @@ impl FieldSelection {
                 fields.push(Self::PerModelIcons);
                 fields.push(Self::EffortLevel);
                 fields.push(Self::ThinkingIcon);
+                fields.push(Self::FlashIcon);
+                fields.push(Self::ProIcon);
+                fields.push(Self::UltraIcon);
+                fields.push(Self::FlashLiteIcon);
                 fields.push(Self::OpusIcon);
-                fields.push(Self::FableIcon);
-                fields.push(Self::MythosIcon);
                 fields.push(Self::SonnetIcon);
                 fields.push(Self::HaikuIcon);
+                fields.push(Self::FableIcon);
+                fields.push(Self::MythosIcon);
             } else {
                 fields.push(Self::PlainIcon);
                 fields.push(Self::NerdFontIcon);
@@ -269,6 +277,34 @@ impl EditorWidget {
                         .and_then(|v| v.as_str())
                         .unwrap_or_default()
                         .into(),
+                    None,
+                ),
+                FieldSelection::FlashIcon => (
+                    "Flash Icon",
+                    pm.map_or(String::new(), |p| {
+                        p.flash.for_mode(theme.style.mode).to_string()
+                    }),
+                    None,
+                ),
+                FieldSelection::ProIcon => (
+                    "Pro Icon",
+                    pm.map_or(String::new(), |p| {
+                        p.pro.for_mode(theme.style.mode).to_string()
+                    }),
+                    None,
+                ),
+                FieldSelection::UltraIcon => (
+                    "Ultra Icon",
+                    pm.map_or(String::new(), |p| {
+                        p.ultra.for_mode(theme.style.mode).to_string()
+                    }),
+                    None,
+                ),
+                FieldSelection::FlashLiteIcon => (
+                    "Flash Lite Icon",
+                    pm.map_or(String::new(), |p| {
+                        p.flash_lite.for_mode(theme.style.mode).to_string()
+                    }),
                     None,
                 ),
                 FieldSelection::OpusIcon => (

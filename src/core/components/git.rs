@@ -122,6 +122,31 @@ impl GitComponent {
 
 impl Component for GitComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
+        if let Some(vcs) = &input.vcs
+            && let Some(branch) = &vcs.branch
+        {
+            let mut metadata = HashMap::new();
+            metadata.insert("branch".into(), branch.clone());
+            if let Some(ref t) = vcs.r#type {
+                metadata.insert("type".into(), t.clone());
+            }
+            if let Some(dirty) = vcs.dirty {
+                metadata.insert("dirty".into(), dirty.to_string());
+            }
+
+            let status_indicator = if vcs.dirty.unwrap_or(false) {
+                "\u{25cf}" // ●
+            } else {
+                "\u{2713}" // ✓
+            };
+
+            return Some(ComponentData {
+                primary: branch.clone(),
+                secondary: status_indicator.into(),
+                metadata,
+            });
+        }
+
         let dir = &input.workspace.current_dir;
         let branch = Self::branch_name(dir)?;
         let status = Self::get_status(dir);
@@ -167,5 +192,47 @@ impl Component for GitComponent {
 
     fn id(&self) -> ComponentId {
         ComponentId::Git
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::input::InputData;
+
+    #[test]
+    fn collects_native_vcs_payload_clean() {
+        let input: InputData = serde_json::from_value(serde_json::json!({
+            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "workspace": {"current_dir": "/tmp"},
+            "vcs": {
+                "type": "git",
+                "branch": "feat/statusline",
+                "dirty": false
+            }
+        }))
+        .unwrap();
+
+        let data = GitComponent::new().collect(&input).unwrap();
+        assert_eq!(data.primary, "feat/statusline");
+        assert_eq!(data.secondary, "\u{2713}");
+    }
+
+    #[test]
+    fn collects_native_vcs_payload_dirty() {
+        let input: InputData = serde_json::from_value(serde_json::json!({
+            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "workspace": {"current_dir": "/tmp"},
+            "vcs": {
+                "type": "git",
+                "branch": "main",
+                "dirty": true
+            }
+        }))
+        .unwrap();
+
+        let data = GitComponent::new().collect(&input).unwrap();
+        assert_eq!(data.primary, "main");
+        assert_eq!(data.secondary, "\u{25cf}");
     }
 }

@@ -134,16 +134,10 @@ mod tests {
             },
             workspace: Workspace {
                 current_dir: "/tmp/project".into(),
-                git_worktree: None,
+                ..Default::default()
             },
-            worktree: None,
-            effort: None,
-            thinking: None,
             context_window,
-            rate_limits: None,
-            pr: None,
-            cost: None,
-            output_style: None,
+            ..Default::default()
         }
     }
 

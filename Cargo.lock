@@ -3,6 +3,23 @@
 version = 4
 
 [[package]]
+name = "agyline"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "dirs",
+ "emojis",
+ "hostname",
+ "ratatui",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
+ "unicode-width 0.2.0",
+ "unicode_names2",
+]
+
+[[package]]
 name = "allocator-api2"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1172,23 +1189,6 @@ dependencies = [
  "serde_json",
  "unicode-xid",
  "wasmparser",
-]
-
-[[package]]
-name = "xline"
-version = "0.1.0"
-dependencies = [
- "crossterm",
- "dirs",
- "emojis",
- "hostname",
- "ratatui",
- "serde",
- "serde_json",
- "tempfile",
- "toml",
- "unicode-width 0.2.0",
- "unicode_names2",
 ]
 
 [[package]]

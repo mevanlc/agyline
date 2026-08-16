@@ -55,6 +55,7 @@ pub fn collect_all_components(
         }
 
         let data = match comp_cfg.id {
+            ComponentId::AgentState => AgentStateComponent::new().collect(input),
             ComponentId::Model => {
                 let show_effort = comp_cfg
                     .options
@@ -74,6 +75,32 @@ pub fn collect_all_components(
                     .collect(input)
             }
             ComponentId::Directory => DirectoryComponent::new().collect(input),
+            ComponentId::Git => {
+                let show_sha = comp_cfg
+                    .options
+                    .get("show_sha")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                GitComponent::new().with_sha(show_sha).collect(input)
+            }
+            ComponentId::ContextWindow => ContextWindowComponent::new().collect(input),
+            ComponentId::Quota => {
+                let bucket = comp_cfg
+                    .options
+                    .get("bucket")
+                    .and_then(|v| v.as_str())
+                    .map(ToString::to_string);
+                QuotaComponent::new().with_bucket(bucket).collect(input)
+            }
+            ComponentId::TaskCount => TaskCountComponent::new().collect(input),
+            ComponentId::ExecutionMode => ExecutionModeComponent::new().collect(input),
+            ComponentId::VimMode => VimModeComponent::new().collect(input),
+            ComponentId::ArtifactCount => ArtifactCountComponent::new().collect(input),
+            ComponentId::PendingInput => PendingInputComponent::new().collect(input),
+            ComponentId::ToolConfirmation => ToolConfirmationComponent::new().collect(input),
+            ComponentId::Sandbox => SandboxComponent::new().collect(input),
+            ComponentId::PlanTier => PlanTierComponent::new().collect(input),
+            ComponentId::Email => EmailComponent::new().collect(input),
             ComponentId::Worktree => {
                 let show_original_branch = comp_cfg
                     .options
@@ -92,14 +119,6 @@ pub fn collect_all_components(
                     .and_then(|value| value.as_str())
                     .unwrap_or(DEFAULT_HOSTNAME_RSTRIP);
                 HostnameComponent::new().with_rstrip(rstrip).collect(input)
-            }
-            ComponentId::Git => {
-                let show_sha = comp_cfg
-                    .options
-                    .get("show_sha")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
-                GitComponent::new().with_sha(show_sha).collect(input)
             }
             ComponentId::PullRequest => {
                 let show_review_state = comp_cfg
@@ -123,7 +142,6 @@ pub fn collect_all_components(
                     .with_osc_hyperlinks(osc_hyperlinks)
                     .collect(input)
             }
-            ComponentId::ContextWindow => ContextWindowComponent::new().collect(input),
             ComponentId::UsageFiveHour => FiveHourUsageComponent::new()
                 .with_value(UsageValue::from_options(&comp_cfg.options))
                 .collect(input),

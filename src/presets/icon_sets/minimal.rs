@@ -7,6 +7,13 @@ pub fn icon_set() -> IconSet {
         "Simple ASCII/Unicode symbols",
         vec![
             (
+                AgentState,
+                ComponentIcons {
+                    plain: "\u{25cf}",
+                    nerd_font: "\u{25cf}",
+                },
+            ), // ●
+            (
                 Model,
                 ComponentIcons {
                     plain: "\u{273d}",
@@ -20,6 +27,76 @@ pub fn icon_set() -> IconSet {
                     nerd_font: "\u{f024b}",
                 },
             ), // ◐
+            (
+                Quota,
+                ComponentIcons {
+                    plain: "%",
+                    nerd_font: "%",
+                },
+            ),
+            (
+                TaskCount,
+                ComponentIcons {
+                    plain: "#",
+                    nerd_font: "#",
+                },
+            ),
+            (
+                ExecutionMode,
+                ComponentIcons {
+                    plain: "M",
+                    nerd_font: "M",
+                },
+            ),
+            (
+                VimMode,
+                ComponentIcons {
+                    plain: "V",
+                    nerd_font: "V",
+                },
+            ),
+            (
+                ArtifactCount,
+                ComponentIcons {
+                    plain: "A",
+                    nerd_font: "A",
+                },
+            ),
+            (
+                PendingInput,
+                ComponentIcons {
+                    plain: "?",
+                    nerd_font: "?",
+                },
+            ),
+            (
+                ToolConfirmation,
+                ComponentIcons {
+                    plain: "!",
+                    nerd_font: "!",
+                },
+            ),
+            (
+                Sandbox,
+                ComponentIcons {
+                    plain: "S",
+                    nerd_font: "S",
+                },
+            ),
+            (
+                PlanTier,
+                ComponentIcons {
+                    plain: "*",
+                    nerd_font: "*",
+                },
+            ),
+            (
+                Email,
+                ComponentIcons {
+                    plain: "@",
+                    nerd_font: "@",
+                },
+            ),
             (
                 Worktree,
                 ComponentIcons {

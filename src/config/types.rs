@@ -149,13 +149,24 @@ impl fmt::Display for UsageValue {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ComponentId {
+    AgentState,
     Model,
     Directory,
+    Git,
+    ContextWindow,
+    Quota,
+    TaskCount,
+    ExecutionMode,
+    VimMode,
+    ArtifactCount,
+    PendingInput,
+    ToolConfirmation,
+    Sandbox,
+    PlanTier,
+    Email,
     Worktree,
     Hostname,
-    Git,
     PullRequest,
-    ContextWindow,
     #[serde(rename = "usage_5h")]
     UsageFiveHour,
     #[serde(rename = "usage_7d")]
@@ -169,13 +180,24 @@ pub enum ComponentId {
 impl ComponentId {
     /// All component IDs in default order (separator last).
     pub const ALL: &[ComponentId] = &[
+        ComponentId::AgentState,
         ComponentId::Model,
         ComponentId::Directory,
+        ComponentId::Git,
+        ComponentId::ContextWindow,
+        ComponentId::Quota,
+        ComponentId::TaskCount,
+        ComponentId::ExecutionMode,
+        ComponentId::VimMode,
+        ComponentId::ArtifactCount,
+        ComponentId::PendingInput,
+        ComponentId::ToolConfirmation,
+        ComponentId::Sandbox,
+        ComponentId::PlanTier,
+        ComponentId::Email,
         ComponentId::Worktree,
         ComponentId::Hostname,
-        ComponentId::Git,
         ComponentId::PullRequest,
-        ComponentId::ContextWindow,
         ComponentId::UsageFiveHour,
         ComponentId::UsageSevenDay,
         ComponentId::Cost,
@@ -186,13 +208,24 @@ impl ComponentId {
 
     pub fn display_name(self) -> &'static str {
         match self {
+            ComponentId::AgentState => "Agent State",
             ComponentId::Model => "Model",
             ComponentId::Directory => "Directory",
+            ComponentId::Git => "Git Status",
+            ComponentId::ContextWindow => "Context Window",
+            ComponentId::Quota => "Quota",
+            ComponentId::TaskCount => "Task Count",
+            ComponentId::ExecutionMode => "Execution Mode",
+            ComponentId::VimMode => "Vim Mode",
+            ComponentId::ArtifactCount => "Artifact Count",
+            ComponentId::PendingInput => "Pending Input",
+            ComponentId::ToolConfirmation => "Tool Confirmation",
+            ComponentId::Sandbox => "Sandbox",
+            ComponentId::PlanTier => "Plan Tier",
+            ComponentId::Email => "User Email",
             ComponentId::Worktree => "Worktree",
             ComponentId::Hostname => "Hostname",
-            ComponentId::Git => "Git Status",
             ComponentId::PullRequest => "Pull Request",
-            ComponentId::ContextWindow => "Context Window",
             ComponentId::UsageFiveHour => "Usage (5h)",
             ComponentId::UsageSevenDay => "Usage (7d)",
             ComponentId::Cost => "Cost",
@@ -204,13 +237,24 @@ impl ComponentId {
 
     pub fn description(self) -> &'static str {
         match self {
-            ComponentId::Model => "Active Claude model name",
+            ComponentId::AgentState => "Current agent execution state (idle, thinking, working, tool_use)",
+            ComponentId::Model => "Active model name and tier",
             ComponentId::Directory => "Current working directory",
+            ComponentId::Git => "Branch, dirty indicator, and upstream status from VCS",
+            ComponentId::ContextWindow => "Context window token usage percentage",
+            ComponentId::Quota => "Model/bucket quota usage and reset timer",
+            ComponentId::TaskCount => "Number of active background tasks",
+            ComponentId::ExecutionMode => "Current prompt execution mode (planning, fast)",
+            ComponentId::VimMode => "Active Vim editor mode (NORMAL, INSERT, VISUAL)",
+            ComponentId::ArtifactCount => "Number of conversation artifacts produced",
+            ComponentId::PendingInput => "Number of queued user messages",
+            ComponentId::ToolConfirmation => "Pending tool execution confirmation indicator",
+            ComponentId::Sandbox => "Sandbox status and network permission state",
+            ComponentId::PlanTier => "User subscription tier (Pro, Ultra)",
+            ComponentId::Email => "Authenticated user email or LDAP",
             ComponentId::Worktree => "Active linked worktree",
             ComponentId::Hostname => "Current machine hostname",
-            ComponentId::Git => "Branch, file changes, upstream status, and optional SHA",
             ComponentId::PullRequest => "Open pull request and review state",
-            ComponentId::ContextWindow => "Context window fill percentage",
             ComponentId::UsageFiveHour => "Five-hour rate-limit usage",
             ComponentId::UsageSevenDay => "Seven-day rate-limit usage",
             ComponentId::Cost => "Estimated API cost for this session",
@@ -222,13 +266,24 @@ impl ComponentId {
 
     pub fn short_name(self) -> &'static str {
         match self {
+            ComponentId::AgentState => "State",
             ComponentId::Model => "Model",
             ComponentId::Directory => "Directory",
+            ComponentId::Git => "Git",
+            ComponentId::ContextWindow => "Ctx Window",
+            ComponentId::Quota => "Quota",
+            ComponentId::TaskCount => "Tasks",
+            ComponentId::ExecutionMode => "Exec Mode",
+            ComponentId::VimMode => "Vim",
+            ComponentId::ArtifactCount => "Artifacts",
+            ComponentId::PendingInput => "Pending",
+            ComponentId::ToolConfirmation => "Confirm",
+            ComponentId::Sandbox => "Sandbox",
+            ComponentId::PlanTier => "Plan",
+            ComponentId::Email => "Email",
             ComponentId::Worktree => "Worktree",
             ComponentId::Hostname => "Hostname",
-            ComponentId::Git => "Git",
             ComponentId::PullRequest => "PR",
-            ComponentId::ContextWindow => "Ctx Window",
             ComponentId::UsageFiveHour => "Usage (5h)",
             ComponentId::UsageSevenDay => "Usage (7d)",
             ComponentId::Cost => "Cost",
@@ -356,6 +411,10 @@ impl<'de> Deserialize<'de> for ModelTierIcons {
 #[serde(default)]
 pub struct PerModelIcons {
     pub enabled: bool,
+    pub flash: ModelTierIcons,
+    pub pro: ModelTierIcons,
+    pub ultra: ModelTierIcons,
+    pub flash_lite: ModelTierIcons,
     pub opus: ModelTierIcons,
     pub sonnet: ModelTierIcons,
     pub haiku: ModelTierIcons,
@@ -367,6 +426,10 @@ impl Default for PerModelIcons {
     fn default() -> Self {
         Self {
             enabled: true,
+            flash: ModelTierIcons::new("\u{26a1}", "\u{f040b}"), // ⚡ / 󱐋 md-lightning_bolt
+            pro: ModelTierIcons::new("\u{1f9e0}", "\u{f09d1}"), // 🧠 / 󰧑 md-brain
+            ultra: ModelTierIcons::new("\u{1f451}", "\u{edeb}"), // 👑 /  fa-crown
+            flash_lite: ModelTierIcons::new("\u{1f4a1}", "\u{f0335}"), // 💡 / 󰌵 md-lightbulb
             opus: ModelTierIcons::new("\u{1f989}", "\u{f03d2}"), // 🦉 / 󰏒 md-owl
             sonnet: ModelTierIcons::new("\u{1f3ad}", "\u{eeb6}"), // 🎭 /  fa-masks_theater
             haiku: ModelTierIcons::new("\u{1f338}", "\u{f024a}"), // 🌸 / 󰉊 md-flower
@@ -478,11 +541,22 @@ mod tests {
             serde_json::to_string(&ComponentId::UsageSevenDay).unwrap(),
             "\"usage_7d\""
         );
+        assert_eq!(ComponentId::AgentState.display_name(), "Agent State");
+        assert_eq!(ComponentId::Quota.display_name(), "Quota");
+        assert_eq!(ComponentId::TaskCount.display_name(), "Task Count");
+        assert_eq!(ComponentId::ExecutionMode.display_name(), "Execution Mode");
+        assert_eq!(ComponentId::VimMode.display_name(), "Vim Mode");
+        assert_eq!(ComponentId::ArtifactCount.display_name(), "Artifact Count");
+        assert_eq!(ComponentId::PendingInput.display_name(), "Pending Input");
+        assert_eq!(ComponentId::ToolConfirmation.display_name(), "Tool Confirmation");
+        assert_eq!(ComponentId::Sandbox.display_name(), "Sandbox");
+        assert_eq!(ComponentId::PlanTier.display_name(), "Plan Tier");
+        assert_eq!(ComponentId::Email.display_name(), "User Email");
         assert_eq!(ComponentId::PullRequest.display_name(), "Pull Request");
         assert_eq!(ComponentId::Git.display_name(), "Git Status");
         assert_eq!(
             ComponentId::Git.description(),
-            "Branch, file changes, upstream status, and optional SHA"
+            "Branch, dirty indicator, and upstream status from VCS"
         );
         assert_eq!(
             serde_json::to_string(&ComponentId::PullRequest).unwrap(),
@@ -491,6 +565,10 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&ComponentId::Worktree).unwrap(),
             "\"worktree\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ComponentId::AgentState).unwrap(),
+            "\"agent_state\""
         );
     }
 

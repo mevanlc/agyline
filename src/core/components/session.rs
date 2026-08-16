@@ -38,36 +38,55 @@ impl SessionComponent {
 
 impl Component for SessionComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
-        let cost_data = input.cost.as_ref()?;
-        let duration = cost_data.total_duration_ms?;
-        let primary = Self::format_duration(duration);
+        if let Some(cost_data) = &input.cost
+            && let Some(duration) = cost_data.total_duration_ms
+        {
+            let primary = Self::format_duration(duration);
 
-        let secondary = match (cost_data.total_lines_added, cost_data.total_lines_removed) {
-            (Some(a), Some(r)) if a > 0 || r > 0 => {
-                format!("\x1b[32m+{}\x1b[0m \x1b[31m-{}\x1b[0m", a, r)
+            let secondary = match (cost_data.total_lines_added, cost_data.total_lines_removed) {
+                (Some(a), Some(r)) if a > 0 || r > 0 => {
+                    format!("\x1b[32m+{}\x1b[0m \x1b[31m-{}\x1b[0m", a, r)
+                }
+                (Some(a), None) if a > 0 => format!("\x1b[32m+{}\x1b[0m", a),
+                (None, Some(r)) if r > 0 => format!("\x1b[31m-{}\x1b[0m", r),
+                _ => String::new(),
+            };
+
+            let mut metadata = HashMap::new();
+            metadata.insert("duration_ms".into(), duration.to_string());
+            if let Some(api) = cost_data.total_api_duration_ms {
+                metadata.insert("api_duration_ms".into(), api.to_string());
             }
-            (Some(a), None) if a > 0 => format!("\x1b[32m+{}\x1b[0m", a),
-            (None, Some(r)) if r > 0 => format!("\x1b[31m-{}\x1b[0m", r),
-            _ => String::new(),
-        };
+            if let Some(a) = cost_data.total_lines_added {
+                metadata.insert("lines_added".into(), a.to_string());
+            }
+            if let Some(r) = cost_data.total_lines_removed {
+                metadata.insert("lines_removed".into(), r.to_string());
+            }
 
-        let mut metadata = HashMap::new();
-        metadata.insert("duration_ms".into(), duration.to_string());
-        if let Some(api) = cost_data.total_api_duration_ms {
-            metadata.insert("api_duration_ms".into(), api.to_string());
-        }
-        if let Some(a) = cost_data.total_lines_added {
-            metadata.insert("lines_added".into(), a.to_string());
-        }
-        if let Some(r) = cost_data.total_lines_removed {
-            metadata.insert("lines_removed".into(), r.to_string());
+            return Some(ComponentData {
+                primary,
+                secondary,
+                metadata,
+            });
         }
 
-        Some(ComponentData {
-            primary,
-            secondary,
-            metadata,
-        })
+        if let Some(conv_id) = input.conversation_id.as_deref().or(input.session_id.as_deref()) {
+            let short_id = if conv_id.len() > 8 {
+                &conv_id[..8]
+            } else {
+                conv_id
+            };
+            let mut metadata = HashMap::new();
+            metadata.insert("conversation_id".into(), conv_id.to_string());
+            return Some(ComponentData {
+                primary: short_id.to_string(),
+                secondary: String::new(),
+                metadata,
+            });
+        }
+
+        None
     }
 
     fn id(&self) -> ComponentId {

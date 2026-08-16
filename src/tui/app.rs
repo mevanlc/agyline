@@ -147,6 +147,10 @@ pub enum IconPickerPurpose {
     PlainIcon,
     NerdFontIcon,
     ThinkingIcon,
+    FlashIcon,
+    ProIcon,
+    UltraIcon,
+    FlashLiteIcon,
     OpusIcon,
     SonnetIcon,
     HaikuIcon,
@@ -650,6 +654,18 @@ impl App {
                         }
                         FieldSelection::ThinkingIcon => {
                             self.open_icon_picker(IconPickerPurpose::ThinkingIcon);
+                        }
+                        FieldSelection::FlashIcon => {
+                            self.open_icon_picker(IconPickerPurpose::FlashIcon);
+                        }
+                        FieldSelection::ProIcon => {
+                            self.open_icon_picker(IconPickerPurpose::ProIcon);
+                        }
+                        FieldSelection::UltraIcon => {
+                            self.open_icon_picker(IconPickerPurpose::UltraIcon);
+                        }
+                        FieldSelection::FlashLiteIcon => {
+                            self.open_icon_picker(IconPickerPurpose::FlashLiteIcon);
                         }
                         FieldSelection::OpusIcon => {
                             self.open_icon_picker(IconPickerPurpose::OpusIcon);
@@ -1379,7 +1395,11 @@ impl App {
         );
         let initial_tab = match purpose {
             IconPickerPurpose::NerdFontIcon => IconPickerTab::NerdFont,
-            IconPickerPurpose::OpusIcon
+            IconPickerPurpose::FlashIcon
+            | IconPickerPurpose::ProIcon
+            | IconPickerPurpose::UltraIcon
+            | IconPickerPurpose::FlashLiteIcon
+            | IconPickerPurpose::OpusIcon
             | IconPickerPurpose::SonnetIcon
             | IconPickerPurpose::HaikuIcon
             | IconPickerPurpose::FableIcon
@@ -1402,6 +1422,26 @@ impl App {
                     .and_then(|v| v.as_str())
                     .unwrap_or_default()
                     .to_string(),
+                IconPickerPurpose::FlashIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.flash.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
+                IconPickerPurpose::ProIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.pro.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
+                IconPickerPurpose::UltraIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.ultra.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
+                IconPickerPurpose::FlashLiteIcon => {
+                    comp.icon.per_model.as_ref().map_or(String::new(), |p| {
+                        p.flash_lite.for_mode(self.theme.style.mode).to_string()
+                    })
+                }
                 IconPickerPurpose::OpusIcon => {
                     comp.icon.per_model.as_ref().map_or(String::new(), |p| {
                         p.opus.for_mode(self.theme.style.mode).to_string()
@@ -1659,6 +1699,34 @@ impl App {
                     comp.options
                         .insert("thinking_icon".into(), serde_json::Value::String(icon_str));
                     "Thinking icon"
+                }
+                IconPickerPurpose::FlashIcon => {
+                    let mode = self.theme.style.mode;
+                    if let Some(pm) = comp.icon.per_model.as_mut() {
+                        *pm.flash.for_mode_mut(mode) = icon_str;
+                    }
+                    "Flash icon"
+                }
+                IconPickerPurpose::ProIcon => {
+                    let mode = self.theme.style.mode;
+                    if let Some(pm) = comp.icon.per_model.as_mut() {
+                        *pm.pro.for_mode_mut(mode) = icon_str;
+                    }
+                    "Pro icon"
+                }
+                IconPickerPurpose::UltraIcon => {
+                    let mode = self.theme.style.mode;
+                    if let Some(pm) = comp.icon.per_model.as_mut() {
+                        *pm.ultra.for_mode_mut(mode) = icon_str;
+                    }
+                    "Ultra icon"
+                }
+                IconPickerPurpose::FlashLiteIcon => {
+                    let mode = self.theme.style.mode;
+                    if let Some(pm) = comp.icon.per_model.as_mut() {
+                        *pm.flash_lite.for_mode_mut(mode) = icon_str;
+                    }
+                    "Flash Lite icon"
                 }
                 IconPickerPurpose::OpusIcon => {
                     let mode = self.theme.style.mode;

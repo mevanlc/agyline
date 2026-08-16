@@ -9,32 +9,36 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 
-const MASCOT_COLOR: Color = Color::Rgb(215, 119, 87);
-const BORDER_COLOR: Color = Color::Rgb(215, 119, 87);
+const MASCOT_COLOR: Color = Color::Rgb(66, 133, 244);
+const BORDER_COLOR: Color = Color::Rgb(66, 133, 244);
 const TEXT_COLOR: Color = Color::Rgb(153, 153, 153);
 
-/// Try to read the Claude Code version from ~/.claude.json (lastReleaseNotesSeen).
-fn read_cc_version() -> String {
-    let path = match dirs::home_dir() {
-        Some(h) => h.join(".claude.json"),
-        None => return "?.?.?".into(),
-    };
-    let contents = match std::fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(_) => return "?.?.?".into(),
-    };
-    let json: serde_json::Value = match serde_json::from_str(&contents) {
-        Ok(v) => v,
-        Err(_) => return "?.?.?".into(),
-    };
-    match json.get("lastReleaseNotesSeen").and_then(|v| v.as_str()) {
-        Some(s) if !s.is_empty() => s.to_string(),
-        _ => "?.?.?".into(),
+/// Try to read the Antigravity CLI version or Claude Code version fallback.
+fn read_cli_version() -> String {
+    if let Some(h) = dirs::home_dir() {
+        let agy_path = h.join(".gemini").join("antigravity-cli").join("version.json");
+        if let Ok(contents) = std::fs::read_to_string(&agy_path)
+            && let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents)
+            && let Some(s) = json.get("version").and_then(|v| v.as_str())
+            && !s.is_empty()
+        {
+            return s.to_string();
+        }
+
+        let claude_path = h.join(".claude.json");
+        if let Ok(contents) = std::fs::read_to_string(&claude_path)
+            && let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents)
+            && let Some(s) = json.get("lastReleaseNotesSeen").and_then(|v| v.as_str())
+            && !s.is_empty()
+        {
+            return s.to_string();
+        }
     }
+    "1.0.0".into()
 }
 
-/// Render the Claude Code banner with mascot, then the statusline preview
-/// immediately below (no gap), mimicking the real Claude Code startup screen.
+/// Render the Antigravity CLI banner with mascot, then the statusline preview
+/// immediately below (no gap), mimicking the real Antigravity startup screen.
 pub fn render(f: &mut Frame, area: Rect, theme: &UserTheme) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
@@ -44,14 +48,14 @@ pub fn render(f: &mut Frame, area: Rect, theme: &UserTheme) {
         ])
         .split(area);
 
-    let version = read_cc_version();
+    let version = read_cli_version();
 
     // --- Banner box (outer border) ---
     let outer_block = Block::default()
         .borders(Borders::ALL)
         .border_set(border::ROUNDED)
         .border_style(Style::default().fg(BORDER_COLOR))
-        .title(format!(" Claude Code v{} ", version))
+        .title(format!(" Google Antigravity CLI v{} ", version))
         .title_style(Style::default().fg(BORDER_COLOR));
 
     let inner = outer_block.inner(layout[0]);
@@ -89,11 +93,11 @@ pub fn render(f: &mut Frame, area: Rect, theme: &UserTheme) {
             Style::default().fg(MASCOT_COLOR),
         )),
         Line::from(Span::styled(
-            "Opus \u{00b7} Sonnet \u{00b7} Haiku",
+            "Flash \u{00b7} Pro \u{00b7} Ultra",
             Style::default().fg(TEXT_COLOR),
         )),
         Line::from(Span::styled(
-            format!("~/xline-v{}", env!("CARGO_PKG_VERSION")),
+            format!("~/agyline-v{}", env!("CARGO_PKG_VERSION")),
             Style::default().fg(TEXT_COLOR),
         )),
     ]);

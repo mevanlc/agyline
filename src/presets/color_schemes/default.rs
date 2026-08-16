@@ -10,6 +10,15 @@ pub fn scheme() -> ColorScheme {
         "Standard 16-color palette",
         vec![
             (
+                AgentState,
+                ComponentColors {
+                    icon: Some(C { c16: 10 }),
+                    text: Some(C { c16: 10 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
                 Model,
                 ComponentColors {
                     icon: Some(C { c16: 14 }),
@@ -23,6 +32,96 @@ pub fn scheme() -> ColorScheme {
                 ComponentColors {
                     icon: Some(C { c16: 11 }),
                     text: Some(C { c16: 10 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                Quota,
+                ComponentColors {
+                    icon: Some(C { c16: 13 }),
+                    text: Some(C { c16: 13 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                TaskCount,
+                ComponentColors {
+                    icon: Some(C { c16: 14 }),
+                    text: Some(C { c16: 14 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                ExecutionMode,
+                ComponentColors {
+                    icon: Some(C { c16: 6 }),
+                    text: Some(C { c16: 6 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                VimMode,
+                ComponentColors {
+                    icon: Some(C { c16: 11 }),
+                    text: Some(C { c16: 11 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                ArtifactCount,
+                ComponentColors {
+                    icon: Some(C { c16: 12 }),
+                    text: Some(C { c16: 12 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                PendingInput,
+                ComponentColors {
+                    icon: Some(C { c16: 13 }),
+                    text: Some(C { c16: 13 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                ToolConfirmation,
+                ComponentColors {
+                    icon: Some(C { c16: 9 }),
+                    text: Some(C { c16: 9 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                Sandbox,
+                ComponentColors {
+                    icon: Some(C { c16: 10 }),
+                    text: Some(C { c16: 10 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                PlanTier,
+                ComponentColors {
+                    icon: Some(C { c16: 11 }),
+                    text: Some(C { c16: 11 }),
+                    background: None,
+                    text_bold: false,
+                },
+            ),
+            (
+                Email,
+                ComponentColors {
+                    icon: Some(C { c16: 7 }),
+                    text: Some(C { c16: 7 }),
                     background: None,
                     text_bold: false,
                 },

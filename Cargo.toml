@@ -1,13 +1,13 @@
 [package]
-name = "xline"
+name = "agyline"
 version = "0.1.0"
 edition = "2024"
-description = "A terminal status line theme editor and renderer for Claude Code"
+description = "A terminal status line theme editor and renderer for Google Antigravity CLI"
 license = "MIT"
-repository = "https://github.com/mevanlc/xline"
-homepage = "https://github.com/mevanlc/xline"
+repository = "https://github.com/mevanlc/agyline"
+homepage = "https://github.com/mevanlc/agyline"
 readme = "README.md"
-keywords = ["claude", "statusline", "terminal", "tui", "theme"]
+keywords = ["antigravity", "statusline", "terminal", "tui", "theme"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]

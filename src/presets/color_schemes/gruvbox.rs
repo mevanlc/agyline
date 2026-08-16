@@ -10,6 +10,15 @@ pub fn scheme() -> ColorScheme {
         "Retro groove dark colors",
         vec![
             (
+                AgentState,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 142 }),
+                    text: Some(Color256 { c256: 142 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
                 Model,
                 ComponentColors {
                     icon: Some(Color256 { c256: 208 }),
@@ -23,6 +32,96 @@ pub fn scheme() -> ColorScheme {
                 ComponentColors {
                     icon: Some(Color256 { c256: 142 }),
                     text: Some(Color256 { c256: 142 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                Quota,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 175 }),
+                    text: Some(Color256 { c256: 175 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                TaskCount,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 214 }),
+                    text: Some(Color256 { c256: 214 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                ExecutionMode,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 109 }),
+                    text: Some(Color256 { c256: 109 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                VimMode,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 214 }),
+                    text: Some(Color256 { c256: 214 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                ArtifactCount,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 109 }),
+                    text: Some(Color256 { c256: 109 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                PendingInput,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 175 }),
+                    text: Some(Color256 { c256: 175 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                ToolConfirmation,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 167 }),
+                    text: Some(Color256 { c256: 167 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                Sandbox,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 142 }),
+                    text: Some(Color256 { c256: 142 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                PlanTier,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 214 }),
+                    text: Some(Color256 { c256: 214 }),
+                    background: None,
+                    text_bold: true,
+                },
+            ),
+            (
+                Email,
+                ComponentColors {
+                    icon: Some(Color256 { c256: 223 }),
+                    text: Some(Color256 { c256: 223 }),
                     background: None,
                     text_bold: true,
                 },

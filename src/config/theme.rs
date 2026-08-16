@@ -32,12 +32,28 @@ impl UserTheme {
 
         let components = vec![
             ComponentConfig {
+                id: AgentState,
+                enabled: true,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{25cf}".into(), // ●
+                    nerd_font: "\u{f169d}".into(), // 󱚝
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 10 }),
+                    text: Some(AnsiColor::Color16 { c16: 10 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
                 id: Model,
                 enabled: true,
                 icon: IconConfig {
                     per_model: Some(PerModelIcons::default()),
                     plain: "\u{1f916}".into(), // 🤖
-                    nerd_font: "\u{e26d}".into(),
+                    nerd_font: "\u{f09d1}".into(), // 󰧑
                 },
                 colors: ColorConfig {
                     icon: Some(AnsiColor::Color16 { c16: 14 }),
@@ -67,8 +83,203 @@ impl UserTheme {
                 options: Default::default(),
             },
             ComponentConfig {
-                id: Worktree,
+                id: Git,
                 enabled: true,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f33f}".into(), // 🌿
+                    nerd_font: "\u{f02a2}".into(),
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 10 }),
+                    text: Some(AnsiColor::Color16 { c16: 10 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: std::collections::HashMap::from([(
+                    GIT_OPTION_AUTOHIDE_BRANCH.into(),
+                    serde_json::Value::Bool(DEFAULT_GIT_AUTOHIDE_BRANCH),
+                )]),
+            },
+            ComponentConfig {
+                id: ContextWindow,
+                enabled: true,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{26a1}".into(), // ⚡
+                    nerd_font: "\u{f0e7}".into(),
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 11 }),
+                    text: Some(AnsiColor::Color16 { c16: 11 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: Quota,
+                enabled: true,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f4ca}".into(), // 📊
+                    nerd_font: "\u{f051f}".into(), // 󰔟
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 13 }),
+                    text: Some(AnsiColor::Color16 { c16: 13 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: TaskCount,
+                enabled: true,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{2699}\u{fe0f}".into(), // ⚙️
+                    nerd_font: "\u{f048b}".into(), // 󰒋
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 14 }),
+                    text: Some(AnsiColor::Color16 { c16: 14 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: ExecutionMode,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f9ed}".into(), // 🧭
+                    nerd_font: "\u{f0633}".into(), // 󰘳
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 6 }),
+                    text: Some(AnsiColor::Color16 { c16: 6 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: VimMode,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{2328}\u{fe0f}".into(), // ⌨️
+                    nerd_font: "\u{e7c5}".into(), // 
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 11 }),
+                    text: Some(AnsiColor::Color16 { c16: 11 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: ArtifactCount,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f4e6}".into(), // 📦
+                    nerd_font: "\u{f03d6}".into(), // 󰏖
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 12 }),
+                    text: Some(AnsiColor::Color16 { c16: 12 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: PendingInput,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f4ac}".into(), // 💬
+                    nerd_font: "\u{f0b79}".into(), // 󰭹
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 13 }),
+                    text: Some(AnsiColor::Color16 { c16: 13 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: ToolConfirmation,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f514}".into(), // 🔔
+                    nerd_font: "\u{f009a}".into(), // 󰂚
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 9 }),
+                    text: Some(AnsiColor::Color16 { c16: 9 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: Sandbox,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f6e1}\u{fe0f}".into(), // 🛡️
+                    nerd_font: "\u{f0208}".into(), // 󰈈
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 10 }),
+                    text: Some(AnsiColor::Color16 { c16: 10 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: PlanTier,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{2b50}".into(), // ⭐
+                    nerd_font: "\u{f04ce}".into(), // 󰓎
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 11 }),
+                    text: Some(AnsiColor::Color16 { c16: 11 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: Email,
+                enabled: false,
+                icon: IconConfig {
+                    per_model: None,
+                    plain: "\u{1f464}".into(), // 👤
+                    nerd_font: "\u{f0009}".into(), // 󰀉
+                },
+                colors: ColorConfig {
+                    icon: Some(AnsiColor::Color16 { c16: 7 }),
+                    text: Some(AnsiColor::Color16 { c16: 7 }),
+                    background: None,
+                },
+                styles: TextStyleConfig { text_bold: false },
+                options: Default::default(),
+            },
+            ComponentConfig {
+                id: Worktree,
+                enabled: false,
                 icon: IconConfig {
                     per_model: None,
                     plain: "\u{1f333}".into(), // 🌳
@@ -111,25 +322,6 @@ impl UserTheme {
                 )]),
             },
             ComponentConfig {
-                id: Git,
-                enabled: false,
-                icon: IconConfig {
-                    per_model: None,
-                    plain: "\u{1f33f}".into(), // 🌿
-                    nerd_font: "\u{f02a2}".into(),
-                },
-                colors: ColorConfig {
-                    icon: Some(AnsiColor::Color16 { c16: 10 }),
-                    text: Some(AnsiColor::Color16 { c16: 10 }),
-                    background: None,
-                },
-                styles: TextStyleConfig { text_bold: false },
-                options: std::collections::HashMap::from([(
-                    GIT_OPTION_AUTOHIDE_BRANCH.into(),
-                    serde_json::Value::Bool(DEFAULT_GIT_AUTOHIDE_BRANCH),
-                )]),
-            },
-            ComponentConfig {
                 id: PullRequest,
                 enabled: false,
                 icon: IconConfig {
@@ -157,22 +349,6 @@ impl UserTheme {
                         serde_json::Value::Bool(DEFAULT_PR_OSC_HYPERLINKS),
                     ),
                 ]),
-            },
-            ComponentConfig {
-                id: ContextWindow,
-                enabled: true,
-                icon: IconConfig {
-                    per_model: None,
-                    plain: "\u{26a1}".into(), // ⚡
-                    nerd_font: "\u{f0e7}".into(),
-                },
-                colors: ColorConfig {
-                    icon: Some(AnsiColor::Color16 { c16: 11 }),
-                    text: Some(AnsiColor::Color16 { c16: 11 }),
-                    background: None,
-                },
-                styles: TextStyleConfig { text_bold: false },
-                options: Default::default(),
             },
             ComponentConfig {
                 id: UsageFiveHour,
@@ -401,30 +577,22 @@ mod tests {
     }
 
     #[test]
-    fn test_worktree_replaces_git_in_fresh_themes_and_defaults_to_branch() {
+    fn test_git_enabled_in_fresh_themes() {
         let theme = UserTheme::default_theme();
-        let worktree = theme.get_component(ComponentId::Worktree).unwrap();
         let git = theme.get_component(ComponentId::Git).unwrap();
+        let state = theme.get_component(ComponentId::AgentState).unwrap();
+        let quota = theme.get_component(ComponentId::Quota).unwrap();
+        let task_count = theme.get_component(ComponentId::TaskCount).unwrap();
 
-        assert!(worktree.enabled);
-        assert!(!git.enabled);
+        assert!(state.enabled);
+        assert!(git.enabled);
+        assert!(quota.enabled);
+        assert!(task_count.enabled);
         assert_eq!(
             git.options
                 .get(GIT_OPTION_AUTOHIDE_BRANCH)
                 .and_then(|value| value.as_bool()),
             Some(true)
-        );
-        assert_eq!(
-            WorktreeOutside::from_options(&worktree.options),
-            WorktreeOutside::Branch
-        );
-        assert_eq!(worktree.display_name(), "Worktree (or Branch)");
-        assert_eq!(
-            worktree
-                .options
-                .get(WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH)
-                .and_then(|value| value.as_bool()),
-            Some(false)
         );
     }
 
@@ -455,17 +623,17 @@ mod tests {
 
         theme.add_missing_components();
 
-        let directory = theme
+        let email = theme
             .components
             .iter()
-            .position(|c| c.id == ComponentId::Directory)
+            .position(|c| c.id == ComponentId::Email)
             .unwrap();
-        let worktree = &theme.components[directory + 1];
+        let worktree = &theme.components[email + 1];
         assert_eq!(worktree.id, ComponentId::Worktree);
         assert!(!worktree.enabled);
         assert_eq!(
             WorktreeOutside::from_options(&worktree.options),
-            WorktreeOutside::Branch
+            WorktreeOutside::default()
         );
         assert_eq!(
             worktree
@@ -475,22 +643,17 @@ mod tests {
             Some(false)
         );
 
-        assert_eq!(theme.components[directory + 2].id, ComponentId::Hostname);
-        assert!(!theme.components[directory + 2].enabled);
+        assert_eq!(theme.components[email + 2].id, ComponentId::Hostname);
+        assert!(!theme.components[email + 2].enabled);
         assert_eq!(
-            theme.components[directory + 2]
+            theme.components[email + 2]
                 .options
                 .get("rstrip")
                 .and_then(|value| value.as_str()),
             Some(DEFAULT_HOSTNAME_RSTRIP)
         );
 
-        let git = theme
-            .components
-            .iter()
-            .position(|c| c.id == ComponentId::Git)
-            .unwrap();
-        let pull_request = &theme.components[git + 1];
+        let pull_request = &theme.components[email + 3];
         assert_eq!(pull_request.id, ComponentId::PullRequest);
         assert!(!pull_request.enabled);
         assert_eq!(

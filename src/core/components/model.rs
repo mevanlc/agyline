@@ -100,7 +100,18 @@ impl Component for ModelComponent {
             && pm.enabled
         {
             let model_id = input.model.id.to_ascii_lowercase();
-            let tier = if model_id.contains("mythos") {
+            let tier = if model_id.contains("ultra") {
+                &pm.ultra
+            } else if model_id.contains("flash-lite")
+                || model_id.contains("flash_lite")
+                || model_id.contains("flash lite")
+            {
+                &pm.flash_lite
+            } else if model_id.contains("flash") {
+                &pm.flash
+            } else if model_id.contains("pro") {
+                &pm.pro
+            } else if model_id.contains("mythos") {
                 &pm.mythos
             } else if model_id.contains("fable") {
                 &pm.fable
@@ -108,8 +119,10 @@ impl Component for ModelComponent {
                 &pm.opus
             } else if model_id.contains("haiku") {
                 &pm.haiku
-            } else {
+            } else if model_id.contains("sonnet") {
                 &pm.sonnet
+            } else {
+                &pm.flash
             };
             if !tier.plain.is_empty() {
                 metadata.insert("dynamic_icon_plain".into(), tier.plain.clone());

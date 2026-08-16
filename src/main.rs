@@ -4,20 +4,21 @@ use std::path::PathBuf;
 const CONFIG_DIR_ERROR: &str = "--config-dir requires a non-empty path";
 
 fn print_help() {
-    println!("xline {}", env!("CARGO_PKG_VERSION"));
+    println!("agyline {}", env!("CARGO_PKG_VERSION"));
     println!();
     println!("USAGE:");
-    println!("    xline                     Launch TUI theme editor");
-    println!("    <json> | xline            Render status line from JSON input");
+    println!("    agyline                   Launch TUI theme editor");
+    println!("    <json> | agyline          Render status line from JSON input");
     println!();
     println!("OPTIONS:");
     println!("    -h, --help                Print this help message");
     println!("    -V, --version             Print version");
-    println!("    --config-dir <path>       Use a different xline config directory");
+    println!("    --config-dir <path>       Use a different agyline config directory");
     println!("    --install-themes          Install/reinstall default themes");
     println!();
     println!("ENVIRONMENT:");
-    println!("    XLINE_CONFIG_DIR          Override the xline config directory");
+    println!("    AGYLINE_CONFIG_DIR        Override the agyline config directory");
+    println!("    XLINE_CONFIG_DIR          Legacy fallback config directory");
 }
 
 fn config_dir_arg(args: &[String]) -> Result<Option<PathBuf>, &'static str> {
@@ -59,39 +60,39 @@ fn main() {
     }
 
     if args.iter().any(|a| a == "--version" || a == "-V") {
-        println!("xline {}", env!("CARGO_PKG_VERSION"));
+        println!("agyline {}", env!("CARGO_PKG_VERSION"));
         return;
     }
 
     let config_dir = match config_dir_arg(&args) {
         Ok(path) => path,
         Err(message) => {
-            eprintln!("xline: {message}");
+            eprintln!("agyline: {message}");
             std::process::exit(2);
         }
     };
     if let Some(path) = config_dir {
-        xline::config::manager::set_config_dir_override(path)
+        agyline::config::manager::set_config_dir_override(path)
             .expect("config directory override was already set");
     }
 
     // Handle --install-themes
     if args.iter().any(|a| a == "--install-themes") {
-        let dir = xline::config::manager::themes_dir();
+        let dir = agyline::config::manager::themes_dir();
         if let Err(e) = std::fs::create_dir_all(&dir) {
-            eprintln!("xline: cannot create themes dir: {}", e);
+            eprintln!("agyline: cannot create themes dir: {}", e);
             std::process::exit(1);
         }
-        match xline::config::manager::write_default_themes(&dir, true) {
+        match agyline::config::manager::write_default_themes(&dir, true) {
             Ok(n) => {
                 eprintln!(
-                    "xline: installed {} default theme(s) to {}",
+                    "agyline: installed {} default theme(s) to {}",
                     n,
                     dir.display()
                 );
             }
             Err(e) => {
-                eprintln!("xline: error installing themes: {}", e);
+                eprintln!("agyline: error installing themes: {}", e);
                 std::process::exit(1);
             }
         }
@@ -99,8 +100,8 @@ fn main() {
     }
 
     // Bootstrap: ensure themes dir exists with starter themes
-    if let Err(e) = xline::config::manager::bootstrap() {
-        eprintln!("xline: bootstrap error: {}", e);
+    if let Err(e) = agyline::config::manager::bootstrap() {
+        eprintln!("agyline: bootstrap error: {}", e);
         std::process::exit(1);
     }
 
@@ -108,8 +109,8 @@ fn main() {
 
     if stdin_is_terminal {
         // No stdin data → launch TUI editor
-        if let Err(e) = xline::tui::run() {
-            eprintln!("xline: TUI error: {}", e);
+        if let Err(e) = agyline::tui::run() {
+            eprintln!("agyline: TUI error: {}", e);
             std::process::exit(1);
         }
     } else {
@@ -122,30 +123,30 @@ fn run_statusline() {
     // Read JSON from stdin
     let mut input_str = String::new();
     if let Err(e) = io::stdin().read_to_string(&mut input_str) {
-        eprintln!("xline: stdin read error: {}", e);
+        eprintln!("agyline: stdin read error: {}", e);
         std::process::exit(1);
     }
 
-    let input: xline::core::input::InputData = match serde_json::from_str(&input_str) {
+    let input: agyline::core::input::InputData = match serde_json::from_str(&input_str) {
         Ok(data) => data,
         Err(e) => {
-            eprintln!("xline: JSON parse error: {}", e);
+            eprintln!("agyline: JSON parse error: {}", e);
             std::process::exit(1);
         }
     };
 
     // Load active theme
-    let (_name, _path, theme) = match xline::config::manager::load_active_theme() {
+    let (_name, _path, theme) = match agyline::config::manager::load_active_theme() {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("xline: theme load error: {}", e);
+            eprintln!("agyline: theme load error: {}", e);
             std::process::exit(1);
         }
     };
 
     // Collect component data and render
-    let components = xline::core::statusline::collect_all_components(&theme, &input);
-    let generator = xline::core::statusline::StatusLineGenerator::new(&theme);
+    let components = agyline::core::statusline::collect_all_components(&theme, &input);
+    let generator = agyline::core::statusline::StatusLineGenerator::new(&theme);
     let statusline = generator.generate(components);
 
     print!("{}\x1b[0m", statusline);

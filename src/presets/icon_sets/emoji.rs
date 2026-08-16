@@ -7,12 +7,19 @@ pub fn icon_set() -> IconSet {
         "Standard emoji icons",
         vec![
             (
+                AgentState,
+                ComponentIcons {
+                    plain: "\u{25cf}",
+                    nerd_font: "\u{f169d}",
+                },
+            ), // ● / 󱚝
+            (
                 Model,
                 ComponentIcons {
                     plain: "\u{1f916}",
-                    nerd_font: "\u{e26d}",
+                    nerd_font: "\u{f09d1}",
                 },
-            ), // 🤖
+            ), // 🤖 / 󰧑
             (
                 Directory,
                 ComponentIcons {
@@ -20,6 +27,76 @@ pub fn icon_set() -> IconSet {
                     nerd_font: "\u{f024b}",
                 },
             ), // 📁
+            (
+                Quota,
+                ComponentIcons {
+                    plain: "\u{1f4ca}",
+                    nerd_font: "\u{f051f}",
+                },
+            ), // 📊 / 󰔟
+            (
+                TaskCount,
+                ComponentIcons {
+                    plain: "\u{2699}\u{fe0f}",
+                    nerd_font: "\u{f048b}",
+                },
+            ), // ⚙️ / 󰒋
+            (
+                ExecutionMode,
+                ComponentIcons {
+                    plain: "\u{1f9ed}",
+                    nerd_font: "\u{f0633}",
+                },
+            ), // 🧭 / 󰘳
+            (
+                VimMode,
+                ComponentIcons {
+                    plain: "\u{2328}\u{fe0f}",
+                    nerd_font: "\u{e7c5}",
+                },
+            ), // ⌨️ / 
+            (
+                ArtifactCount,
+                ComponentIcons {
+                    plain: "\u{1f4e6}",
+                    nerd_font: "\u{f03d6}",
+                },
+            ), // 📦 / 󰏖
+            (
+                PendingInput,
+                ComponentIcons {
+                    plain: "\u{1f4ac}",
+                    nerd_font: "\u{f0b79}",
+                },
+            ), // 💬 / 󰭹
+            (
+                ToolConfirmation,
+                ComponentIcons {
+                    plain: "\u{1f514}",
+                    nerd_font: "\u{f009a}",
+                },
+            ), // 🔔 / 󰂚
+            (
+                Sandbox,
+                ComponentIcons {
+                    plain: "\u{1f6e1}\u{fe0f}",
+                    nerd_font: "\u{f0208}",
+                },
+            ), // 🛡️ / 󰈈
+            (
+                PlanTier,
+                ComponentIcons {
+                    plain: "\u{2b50}",
+                    nerd_font: "\u{f04ce}",
+                },
+            ), // ⭐ / 󰓎
+            (
+                Email,
+                ComponentIcons {
+                    plain: "\u{1f464}",
+                    nerd_font: "\u{f0009}",
+                },
+            ), // 👤 / 󰀉
             (
                 Worktree,
                 ComponentIcons {

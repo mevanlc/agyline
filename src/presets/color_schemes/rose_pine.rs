@@ -9,6 +9,27 @@ pub fn scheme() -> ColorScheme {
         "Soft dark palette with backgrounds",
         vec![
             (
+                AgentState,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 156,
+                        g: 207,
+                        b: 216,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 156,
+                        g: 207,
+                        b: 216,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 42,
+                        g: 39,
+                        b: 63,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
                 Model,
                 ComponentColors {
                     icon: Some(AnsiColor::Rgb {
@@ -41,6 +62,216 @@ pub fn scheme() -> ColorScheme {
                         r: 196,
                         g: 167,
                         b: 231,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 38,
+                        g: 35,
+                        b: 58,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                Quota,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 196,
+                        g: 167,
+                        b: 231,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 196,
+                        g: 167,
+                        b: 231,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 38,
+                        g: 35,
+                        b: 58,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                TaskCount,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 246,
+                        g: 193,
+                        b: 119,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 246,
+                        g: 193,
+                        b: 119,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 35,
+                        g: 33,
+                        b: 54,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                ExecutionMode,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 49,
+                        g: 116,
+                        b: 143,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 49,
+                        g: 116,
+                        b: 143,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 38,
+                        g: 35,
+                        b: 58,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                VimMode,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 246,
+                        g: 193,
+                        b: 119,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 246,
+                        g: 193,
+                        b: 119,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 35,
+                        g: 33,
+                        b: 54,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                ArtifactCount,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 156,
+                        g: 207,
+                        b: 216,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 156,
+                        g: 207,
+                        b: 216,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 31,
+                        g: 29,
+                        b: 46,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                PendingInput,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 196,
+                        g: 167,
+                        b: 231,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 196,
+                        g: 167,
+                        b: 231,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 38,
+                        g: 35,
+                        b: 58,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                ToolConfirmation,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 235,
+                        g: 111,
+                        b: 146,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 235,
+                        g: 111,
+                        b: 146,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 42,
+                        g: 39,
+                        b: 63,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                Sandbox,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 156,
+                        g: 207,
+                        b: 216,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 156,
+                        g: 207,
+                        b: 216,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 42,
+                        g: 39,
+                        b: 63,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                PlanTier,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 246,
+                        g: 193,
+                        b: 119,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 246,
+                        g: 193,
+                        b: 119,
+                    }),
+                    background: Some(AnsiColor::Rgb {
+                        r: 35,
+                        g: 33,
+                        b: 54,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                Email,
+                ComponentColors {
+                    icon: Some(AnsiColor::Rgb {
+                        r: 224,
+                        g: 222,
+                        b: 244,
+                    }),
+                    text: Some(AnsiColor::Rgb {
+                        r: 224,
+                        g: 222,
+                        b: 244,
                     }),
                     background: Some(AnsiColor::Rgb {
                         r: 38,

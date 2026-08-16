@@ -1,56 +1,54 @@
-# xline
-`xline` is a small Rust Claude Code Statusline.
+# agyline
+`agyline` is a fast, customizable statusline generator and interactive TUI theme editor for the Google Antigravity CLI (and compatible AI coding assistants).
 
 ## Features
-- keyboard-driven TUI editor built with `ratatui`
-- starter themes written automatically on first run
-- plain, Nerd Font, emoji, and powerline-style rendering
-- configurable components for model, directory, worktree, hostname, git, pull requests, native context-window usage, separate five-hour and seven-day Claude rate limits, cost, session, and output style
-- worktree-aware identity display with configurable Hide, Show, Branch, or Directory behavior outside worktrees, plus an optional original-branch field
-- fresh themes enable Worktree with the Branch fallback and leave the richer Git status component disabled
-- Git Status shows branch, file-change and upstream state, and optional SHA; branch autohiding removes duplication with another visible branch field
-- pull-request number display with optional review state, URL, and separate OSC 8 hyperlinks for every visible PR field
-- configurable comma-separated suffix stripping for displayed hostnames
+- **Keyboard-driven TUI editor** built with `ratatui`
+- **Official Google Antigravity support**: Built-in support for `agent_state`, `model`, `vcs` (git), `context_window`, `quota` (weekly bucket), `task_count`, `execution_mode`, `vim`, `artifact_count`, `sandbox`, `plan_tier`, `email`, and more.
+- **Smart model tier icons**: Gemini model tiers (`Flash`, `Pro`, `Ultra`, `Flash Lite`) with customizable icons, preserving Claude model tiers (`Opus`, `Sonnet`, `Haiku`).
+- **Fast native VCS handling**: Utilizes precomputed `vcs` payload from Antigravity to avoid slow subprocess calls.
+- **Rich preset collection**: 10 built-in color schemes (Default, Cometix, Gruvbox, Late, Minimal, Nord, Powerline Dark, Powerline Light, Rose Pine, Tokyo Night) and 5 icon sets (Emoji, Late, Minimal, Nerd Font, Powerline).
+- **Multiple rendering styles**: Plain, Nerd Font, Emoji, and Powerline glyph modes.
 
 ## Build and Install
 ```bash
 # Build from source:
 cargo build --release
-# install locally
+
+# Install locally:
 cargo install --path .
 ```
 
 ## Usage
-Run `xline` in a terminal to open the theme editor:
+Run `agyline` in a terminal to launch the interactive theme editor:
 ```bash
-xline
+agyline
 ```
 
-Add to Claude Code by editing ~/.claude/settings.json and adding/editing the top-level property:
-```json
-"statusLine": {
-  "type": "command",
-  "command": "xline",
-  "padding": 0
-}
+### Configure in Google Antigravity CLI
+Create a statusline helper script, e.g. `~/.gemini/antigravity-cli/statusline.sh`:
+```bash
+#!/usr/bin/env bash
+# Read Antigravity CLI JSON from stdin and pipe to agyline
+exec agyline
 ```
+Make it executable:
+```bash
+chmod +x ~/.gemini/antigravity-cli/statusline.sh
+```
+
+Then configure the statusline command in Antigravity or invoke `agyline` directly with JSON on stdin.
 
 ## Config Directory
-By default, `xline` stores its configuration in `~/.claude/xline`, with themes
-in the `themes` subdirectory. Override the config directory for one-off runs or
-isolated testing with `--config-dir`:
+By default, `agyline` stores its configuration in `~/.gemini/antigravity-cli/agyline` (with fallback to `XLINE_CONFIG_DIR`). Override the config directory with `--config-dir`:
 ```bash
-xline --config-dir /tmp/xline-test
+agyline --config-dir /tmp/agyline-test
 ```
 
-For shells, wrappers, and CI, set `XLINE_CONFIG_DIR`:
+Or via environment variable:
 ```bash
-XLINE_CONFIG_DIR=/tmp/xline-test xline
+AGYLINE_CONFIG_DIR=/tmp/agyline-test agyline
 ```
-
-The command-line option takes precedence over `XLINE_CONFIG_DIR`, which takes
-precedence over the default. The selected directory applies to the TUI,
-statusline rendering, initial theme bootstrap, and `--install-themes`.
 
 ## Inspiration
-This project drew inspiration and themes from [CCometixLine](https://github.com/Haleclipse/CCometixLine).
+This project drew inspiration from [CCometixLine](https://github.com/Haleclipse/CCometixLine).
+

@@ -18,6 +18,19 @@ pub fn scheme() -> ColorScheme {
         "Light powerline with backgrounds",
         vec![
             (
+                AgentState,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 40,
+                        g: 167,
+                        b: 69,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
                 Model,
                 ComponentColors {
                     icon: black(),
@@ -39,6 +52,136 @@ pub fn scheme() -> ColorScheme {
                         r: 255,
                         g: 107,
                         b: 71,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                Quota,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 111,
+                        g: 66,
+                        b: 193,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                TaskCount,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 255,
+                        g: 193,
+                        b: 7,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                ExecutionMode,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 32,
+                        g: 201,
+                        b: 151,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                VimMode,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 255,
+                        g: 107,
+                        b: 71,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                ArtifactCount,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 79,
+                        g: 179,
+                        b: 217,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                PendingInput,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 111,
+                        g: 66,
+                        b: 193,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                ToolConfirmation,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 220,
+                        g: 53,
+                        b: 69,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                Sandbox,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 40,
+                        g: 167,
+                        b: 69,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                PlanTier,
+                ComponentColors {
+                    icon: black(),
+                    text: black(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 255,
+                        g: 193,
+                        b: 7,
+                    }),
+                    text_bold: false,
+                },
+            ),
+            (
+                Email,
+                ComponentColors {
+                    icon: white(),
+                    text: white(),
+                    background: Some(AnsiColor::Rgb {
+                        r: 107,
+                        g: 114,
+                        b: 128,
                     }),
                     text_bold: false,
                 },

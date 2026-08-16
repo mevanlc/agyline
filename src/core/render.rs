@@ -235,16 +235,45 @@ pub fn align_lines_refs(lines: &mut [&mut RenderLine]) {
 /// Full demo text for the TUI preview bar.
 pub fn demo_texts_full() -> HashMap<ComponentId, SegmentText> {
     HashMap::from([
-        (ComponentId::Model, ("Sonnet 4.5".into(), String::new())),
+        (ComponentId::AgentState, ("idle".into(), String::new())),
+        (
+            ComponentId::Model,
+            ("Gemini 3.5 Flash".into(), String::new()),
+        ),
         (ComponentId::Directory, ("project".into(), String::new())),
-        (ComponentId::Worktree, ("refactor".into(), String::new())),
-        (ComponentId::Hostname, ("workstation".into(), String::new())),
         (ComponentId::Git, ("main".into(), "\u{2713}".into())),
-        (ComponentId::PullRequest, ("#482".into(), "approved".into())),
         (
             ComponentId::ContextWindow,
-            ("12% \u{b7} 24k tokens".into(), String::new()),
+            ("14% \u{b7} 88k tokens".into(), String::new()),
         ),
+        (ComponentId::Quota, ("weekly 94%".into(), String::new())),
+        (ComponentId::TaskCount, ("1 task".into(), String::new())),
+        (
+            ComponentId::ExecutionMode,
+            ("planning".into(), String::new()),
+        ),
+        (ComponentId::VimMode, ("NORMAL".into(), String::new())),
+        (
+            ComponentId::ArtifactCount,
+            ("2 artifacts".into(), String::new()),
+        ),
+        (
+            ComponentId::PendingInput,
+            ("1 pending".into(), String::new()),
+        ),
+        (
+            ComponentId::ToolConfirmation,
+            ("confirming".into(), String::new()),
+        ),
+        (ComponentId::Sandbox, ("sandbox".into(), String::new())),
+        (ComponentId::PlanTier, ("Pro".into(), String::new())),
+        (
+            ComponentId::Email,
+            ("developer@email.com".into(), String::new()),
+        ),
+        (ComponentId::Worktree, ("refactor".into(), String::new())),
+        (ComponentId::Hostname, ("workstation".into(), String::new())),
+        (ComponentId::PullRequest, ("#482".into(), "approved".into())),
         (ComponentId::UsageFiveHour, ("5h 23%".into(), String::new())),
         (ComponentId::UsageSevenDay, ("7d 41%".into(), String::new())),
         (ComponentId::Cost, ("$1.23".into(), String::new())),
@@ -748,6 +777,7 @@ mod tests {
     fn git_demo_autohides_only_a_branch_displayed_by_worktree() {
         let mut theme = UserTheme::default_theme();
         theme.get_component_mut(ComponentId::Git).unwrap().enabled = true;
+        theme.get_component_mut(ComponentId::Worktree).unwrap().enabled = true;
 
         let texts = demo_texts_for_components(&theme.components);
         assert_eq!(

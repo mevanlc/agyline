@@ -5,7 +5,8 @@ use std::sync::OnceLock;
 
 use crate::config::theme::UserTheme;
 
-pub const CONFIG_DIR_ENV: &str = "XLINE_CONFIG_DIR";
+pub const CONFIG_DIR_ENV: &str = "AGYLINE_CONFIG_DIR";
+pub const LEGACY_CONFIG_DIR_ENV: &str = "XLINE_CONFIG_DIR";
 
 static CONFIG_DIR_OVERRIDE: OnceLock<PathBuf> = OnceLock::new();
 
@@ -17,14 +18,16 @@ pub fn set_config_dir_override(path: PathBuf) -> Result<(), PathBuf> {
     CONFIG_DIR_OVERRIDE.set(path)
 }
 
-/// Get the xline config directory.
+/// Get the agyline config directory.
 ///
-/// Precedence is: command-line override, `XLINE_CONFIG_DIR`, then
-/// `~/.claude/xline`.
+/// Precedence is: command-line override, `AGYLINE_CONFIG_DIR`, `XLINE_CONFIG_DIR`,
+/// then `~/.gemini/antigravity-cli/agyline`.
 pub fn config_dir() -> PathBuf {
     if let Some(path) = config_dir_override(
         CONFIG_DIR_OVERRIDE.get().map(PathBuf::as_path),
-        std::env::var_os(CONFIG_DIR_ENV).as_deref(),
+        std::env::var_os(CONFIG_DIR_ENV)
+            .or_else(|| std::env::var_os(LEGACY_CONFIG_DIR_ENV))
+            .as_deref(),
     ) {
         return path;
     }
@@ -42,7 +45,7 @@ fn config_dir_override(cli: Option<&Path>, env: Option<&OsStr>) -> Option<PathBu
 }
 
 fn default_config_dir(home: &Path) -> PathBuf {
-    home.join(".claude").join("xline")
+    home.join(".gemini").join("antigravity-cli").join("agyline")
 }
 
 /// Get the themes directory beneath the xline config directory.
@@ -471,7 +474,10 @@ mod tests {
     fn config_dir_defaults_beneath_home() {
         let resolved = default_config_dir(Path::new("/home/tester"));
 
-        assert_eq!(resolved, Path::new("/home/tester/.claude/xline"));
+        assert_eq!(
+            resolved,
+            Path::new("/home/tester/.gemini/antigravity-cli/agyline")
+        );
     }
 
     #[test]
