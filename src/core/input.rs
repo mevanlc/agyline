@@ -274,7 +274,10 @@ mod tests {
 
         let input: InputData = serde_json::from_str(json).unwrap();
         assert_eq!(input.cwd.as_deref(), Some("/home/user/my-project"));
-        assert_eq!(input.conversation_id.as_deref(), Some("12345678-abcd-ef01-2345-6789abcdef01"));
+        assert_eq!(
+            input.conversation_id.as_deref(),
+            Some("12345678-abcd-ef01-2345-6789abcdef01")
+        );
         assert_eq!(input.model.display_name, "Gemini 3.5 Flash (High)");
         assert_eq!(input.agent_state.as_deref(), Some("idle"));
         assert_eq!(input.task_count, Some(1));

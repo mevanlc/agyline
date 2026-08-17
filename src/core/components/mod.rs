@@ -70,4 +70,3 @@ pub use tool_confirmation::ToolConfirmationComponent;
 pub use usage::{FiveHourUsageComponent, SevenDayUsageComponent};
 pub use vim_mode::VimModeComponent;
 pub use worktree::WorktreeComponent;
-

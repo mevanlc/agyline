@@ -38,9 +38,7 @@ impl Component for QuotaComponent {
             (k.as_str(), v)
         };
 
-        let label = bucket_key
-            .strip_prefix("gemini-")
-            .unwrap_or(bucket_key);
+        let label = bucket_key.strip_prefix("gemini-").unwrap_or(bucket_key);
 
         let percentage_str = if let Some(fraction) = bucket.remaining_fraction {
             format!("{:.0}%", (fraction * 100.0).clamp(0.0, 100.0))

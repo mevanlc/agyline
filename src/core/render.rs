@@ -777,7 +777,10 @@ mod tests {
     fn git_demo_autohides_only_a_branch_displayed_by_worktree() {
         let mut theme = UserTheme::default_theme();
         theme.get_component_mut(ComponentId::Git).unwrap().enabled = true;
-        theme.get_component_mut(ComponentId::Worktree).unwrap().enabled = true;
+        theme
+            .get_component_mut(ComponentId::Worktree)
+            .unwrap()
+            .enabled = true;
 
         let texts = demo_texts_for_components(&theme.components);
         assert_eq!(

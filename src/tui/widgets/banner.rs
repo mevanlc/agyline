@@ -16,7 +16,10 @@ const TEXT_COLOR: Color = Color::Rgb(153, 153, 153);
 /// Try to read the Antigravity CLI version or Claude Code version fallback.
 fn read_cli_version() -> String {
     if let Some(h) = dirs::home_dir() {
-        let agy_path = h.join(".gemini").join("antigravity-cli").join("version.json");
+        let agy_path = h
+            .join(".gemini")
+            .join("antigravity-cli")
+            .join("version.json");
         if let Ok(contents) = std::fs::read_to_string(&agy_path)
             && let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents)
             && let Some(s) = json.get("version").and_then(|v| v.as_str())

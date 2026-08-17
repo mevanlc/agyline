@@ -36,7 +36,7 @@ impl UserTheme {
                 enabled: true,
                 icon: IconConfig {
                     per_model: None,
-                    plain: "\u{25cf}".into(), // ●
+                    plain: "\u{25cf}".into(),      // ●
                     nerd_font: "\u{f169d}".into(), // 󱚝
                 },
                 colors: ColorConfig {
@@ -52,7 +52,7 @@ impl UserTheme {
                 enabled: true,
                 icon: IconConfig {
                     per_model: Some(PerModelIcons::default()),
-                    plain: "\u{1f916}".into(), // 🤖
+                    plain: "\u{1f916}".into(),     // 🤖
                     nerd_font: "\u{f09d1}".into(), // 󰧑
                 },
                 colors: ColorConfig {
@@ -122,7 +122,7 @@ impl UserTheme {
                 enabled: true,
                 icon: IconConfig {
                     per_model: None,
-                    plain: "\u{1f4ca}".into(), // 📊
+                    plain: "\u{1f4ca}".into(),     // 📊
                     nerd_font: "\u{f051f}".into(), // 󰔟
                 },
                 colors: ColorConfig {
@@ -139,7 +139,7 @@ impl UserTheme {
                 icon: IconConfig {
                     per_model: None,
                     plain: "\u{2699}\u{fe0f}".into(), // ⚙️
-                    nerd_font: "\u{f048b}".into(), // 󰒋
+                    nerd_font: "\u{f048b}".into(),    // 󰒋
                 },
                 colors: ColorConfig {
                     icon: Some(AnsiColor::Color16 { c16: 14 }),
@@ -154,7 +154,7 @@ impl UserTheme {
                 enabled: false,
                 icon: IconConfig {
                     per_model: None,
-                    plain: "\u{1f9ed}".into(), // 🧭
+                    plain: "\u{1f9ed}".into(),     // 🧭
                     nerd_font: "\u{f0633}".into(), // 󰘳
                 },
                 colors: ColorConfig {
@@ -171,7 +171,7 @@ impl UserTheme {
                 icon: IconConfig {
                     per_model: None,
                     plain: "\u{2328}\u{fe0f}".into(), // ⌨️
-                    nerd_font: "\u{e7c5}".into(), // 
+                    nerd_font: "\u{e7c5}".into(),     // 
                 },
                 colors: ColorConfig {
                     icon: Some(AnsiColor::Color16 { c16: 11 }),
@@ -186,7 +186,7 @@ impl UserTheme {
                 enabled: false,
                 icon: IconConfig {
                     per_model: None,
-                    plain: "\u{1f4e6}".into(), // 📦
+                    plain: "\u{1f4e6}".into(),     // 📦
                     nerd_font: "\u{f03d6}".into(), // 󰏖
                 },
                 colors: ColorConfig {
@@ -202,7 +202,7 @@ impl UserTheme {
                 enabled: false,
                 icon: IconConfig {
                     per_model: None,
-                    plain: "\u{1f4ac}".into(), // 💬
+                    plain: "\u{1f4ac}".into(),     // 💬
                     nerd_font: "\u{f0b79}".into(), // 󰭹
                 },
                 colors: ColorConfig {
@@ -218,7 +218,7 @@ impl UserTheme {
                 enabled: false,
                 icon: IconConfig {
                     per_model: None,
-                    plain: "\u{1f514}".into(), // 🔔
+                    plain: "\u{1f514}".into(),     // 🔔
                     nerd_font: "\u{f009a}".into(), // 󰂚
                 },
                 colors: ColorConfig {
@@ -235,7 +235,7 @@ impl UserTheme {
                 icon: IconConfig {
                     per_model: None,
                     plain: "\u{1f6e1}\u{fe0f}".into(), // 🛡️
-                    nerd_font: "\u{f0208}".into(), // 󰈈
+                    nerd_font: "\u{f0208}".into(),     // 󰈈
                 },
                 colors: ColorConfig {
                     icon: Some(AnsiColor::Color16 { c16: 10 }),
@@ -250,7 +250,7 @@ impl UserTheme {
                 enabled: false,
                 icon: IconConfig {
                     per_model: None,
-                    plain: "\u{2b50}".into(), // ⭐
+                    plain: "\u{2b50}".into(),      // ⭐
                     nerd_font: "\u{f04ce}".into(), // 󰓎
                 },
                 colors: ColorConfig {
@@ -266,7 +266,7 @@ impl UserTheme {
                 enabled: false,
                 icon: IconConfig {
                     per_model: None,
-                    plain: "\u{1f464}".into(), // 👤
+                    plain: "\u{1f464}".into(),     // 👤
                     nerd_font: "\u{f0009}".into(), // 󰀉
                 },
                 colors: ColorConfig {

@@ -71,7 +71,11 @@ impl Component for SessionComponent {
             });
         }
 
-        if let Some(conv_id) = input.conversation_id.as_deref().or(input.session_id.as_deref()) {
+        if let Some(conv_id) = input
+            .conversation_id
+            .as_deref()
+            .or(input.session_id.as_deref())
+        {
             let short_id = if conv_id.len() > 8 {
                 &conv_id[..8]
             } else {

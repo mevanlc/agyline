@@ -237,7 +237,9 @@ impl ComponentId {
 
     pub fn description(self) -> &'static str {
         match self {
-            ComponentId::AgentState => "Current agent execution state (idle, thinking, working, tool_use)",
+            ComponentId::AgentState => {
+                "Current agent execution state (idle, thinking, working, tool_use)"
+            }
             ComponentId::Model => "Active model name and tier",
             ComponentId::Directory => "Current working directory",
             ComponentId::Git => "Branch, dirty indicator, and upstream status from VCS",
@@ -427,7 +429,7 @@ impl Default for PerModelIcons {
         Self {
             enabled: true,
             flash: ModelTierIcons::new("\u{26a1}", "\u{f040b}"), // ⚡ / 󱐋 md-lightning_bolt
-            pro: ModelTierIcons::new("\u{1f9e0}", "\u{f09d1}"), // 🧠 / 󰧑 md-brain
+            pro: ModelTierIcons::new("\u{1f9e0}", "\u{f09d1}"),  // 🧠 / 󰧑 md-brain
             ultra: ModelTierIcons::new("\u{1f451}", "\u{edeb}"), // 👑 /  fa-crown
             flash_lite: ModelTierIcons::new("\u{1f4a1}", "\u{f0335}"), // 💡 / 󰌵 md-lightbulb
             opus: ModelTierIcons::new("\u{1f989}", "\u{f03d2}"), // 🦉 / 󰏒 md-owl
@@ -548,7 +550,10 @@ mod tests {
         assert_eq!(ComponentId::VimMode.display_name(), "Vim Mode");
         assert_eq!(ComponentId::ArtifactCount.display_name(), "Artifact Count");
         assert_eq!(ComponentId::PendingInput.display_name(), "Pending Input");
-        assert_eq!(ComponentId::ToolConfirmation.display_name(), "Tool Confirmation");
+        assert_eq!(
+            ComponentId::ToolConfirmation.display_name(),
+            "Tool Confirmation"
+        );
         assert_eq!(ComponentId::Sandbox.display_name(), "Sandbox");
         assert_eq!(ComponentId::PlanTier.display_name(), "Plan Tier");
         assert_eq!(ComponentId::Email.display_name(), "User Email");
