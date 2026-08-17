@@ -2,18 +2,19 @@ use crate::config::theme::UserTheme;
 use crate::core::render;
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::Rect,
     style::{Color, Modifier, Style},
-    symbols::border,
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
 };
 
-const MASCOT_COLOR: Color = Color::Rgb(66, 133, 244);
-const BORDER_COLOR: Color = Color::Rgb(66, 133, 244);
-const TEXT_COLOR: Color = Color::Rgb(153, 153, 153);
+/// Colors matching the official Antigravity CLI terminal output.
+const COLOR_TITLE: Color = Color::Rgb(138, 180, 248);
+const COLOR_MUTED: Color = Color::Rgb(154, 160, 166);
+const COLOR_BORDER: Color = Color::Rgb(60, 64, 67);
+const COLOR_PROMPT: Color = Color::Rgb(138, 180, 248);
 
-/// Try to read the Antigravity CLI version or Claude Code version fallback.
+/// Try to read the Antigravity CLI version.
 fn read_cli_version() -> String {
     if let Some(h) = dirs::home_dir() {
         let agy_path = h
@@ -27,110 +28,238 @@ fn read_cli_version() -> String {
         {
             return s.to_string();
         }
-
-        let claude_path = h.join(".claude.json");
-        if let Ok(contents) = std::fs::read_to_string(&claude_path)
-            && let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents)
-            && let Some(s) = json.get("lastReleaseNotesSeen").and_then(|v| v.as_str())
-            && !s.is_empty()
-        {
-            return s.to_string();
-        }
     }
-    "1.0.0".into()
+    "1.1.13".into()
 }
 
-/// Render the Antigravity CLI banner with mascot, then the statusline preview
-/// immediately below (no gap), mimicking the real Antigravity startup screen.
+/// Detect the user account and subscription tier.
+fn read_user_info() -> String {
+    if let Ok(output) = std::process::Command::new("git")
+        .args(["config", "user.email"])
+        .output()
+        && output.status.success()
+    {
+        let email = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !email.is_empty() {
+            return format!("{} (Google AI Pro)", email);
+        }
+    }
+    "you@example.com (Google AI Pro)".into()
+}
+
+/// Format current working directory with home abbreviation.
+fn current_dir_display() -> String {
+    if let Ok(cwd) = std::env::current_dir() {
+        if let Some(home) = dirs::home_dir()
+            && let Ok(suffix) = cwd.strip_prefix(&home)
+        {
+            return format!("~/{}", suffix.display());
+        }
+        return cwd.display().to_string();
+    }
+    "~/p/my/agyline".into()
+}
+
+/// Render the official Antigravity CLI header with Gaussian rainbow mascot,
+/// user/model metadata, prompt horizontal rules, and live statusline preview.
 pub fn render(f: &mut Frame, area: Rect, theme: &UserTheme) {
-    let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(10), // Banner box
-            Constraint::Length(1),  // Statusline (immediately below)
-        ])
-        .split(area);
-
     let version = read_cli_version();
+    let user_info = read_user_info();
+    let cwd = current_dir_display();
+    let width = area.width as usize;
 
-    // --- Banner box (outer border) ---
-    let outer_block = Block::default()
-        .borders(Borders::ALL)
-        .border_set(border::ROUNDED)
-        .border_style(Style::default().fg(BORDER_COLOR))
-        .title(format!(" Google Antigravity CLI v{} ", version))
-        .title_style(Style::default().fg(BORDER_COLOR));
-
-    let inner = outer_block.inner(layout[0]);
-    f.render_widget(outer_block, layout[0]);
-
-    // Split inner area into left column (fixed) and right column
-    let columns = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Length(23), // Left: mascot + info (aligns divider with panel border below)
-            Constraint::Min(1),     // Right: future content
-        ])
-        .split(inner);
-
-    // --- Left column: welcome + mascot + info ---
-    let left_content = Text::from(vec![
-        Line::from(""),
-        Line::from(Span::styled(
-            "Welcome back!",
-            Style::default()
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD),
-        )),
-        Line::from(""),
-        Line::from(Span::styled(
-            "\u{2590}\u{259b}\u{2588}\u{2588}\u{2588}\u{259c}\u{258c}",
-            Style::default().fg(MASCOT_COLOR),
-        )),
-        Line::from(Span::styled(
-            "\u{259d}\u{259c}\u{2588}\u{2588}\u{2588}\u{2588}\u{2588}\u{259b}\u{2598}",
-            Style::default().fg(MASCOT_COLOR),
-        )),
-        Line::from(Span::styled(
-            " \u{2598}\u{2598} \u{259d}\u{259d}",
-            Style::default().fg(MASCOT_COLOR),
-        )),
-        Line::from(Span::styled(
-            "Flash \u{00b7} Pro \u{00b7} Ultra",
-            Style::default().fg(TEXT_COLOR),
-        )),
-        Line::from(Span::styled(
-            format!("~/agyline-v{}", env!("CARGO_PKG_VERSION")),
-            Style::default().fg(TEXT_COLOR),
-        )),
-    ]);
-
-    let left = Paragraph::new(left_content).alignment(Alignment::Center);
-    f.render_widget(left, columns[0]);
-
-    // --- Divider: │ column between left and right ---
-    let divider_lines: Vec<Line> = (0..columns[1].height)
-        .map(|_| Line::from(Span::styled("\u{2502}", Style::default().fg(BORDER_COLOR))))
-        .collect();
-    let divider = Paragraph::new(Text::from(divider_lines));
-    f.render_widget(
-        divider,
-        Rect {
-            x: columns[1].x,
-            y: columns[1].y,
-            width: 1,
-            height: columns[1].height,
-        },
-    );
-
-    // --- Statusline preview (immediately below, no border) ---
     let texts = render::demo_texts_for_components(&theme.components);
-    let line = render::build_render_line(&theme.components, theme.style.mode, &texts);
-    let mut spans = vec![Span::raw("  ")]; // indent to match real CC
-    spans.extend(render::render_spans(&line));
+    let statusline_line = render::build_render_line(&theme.components, theme.style.mode, &texts);
+    let statusline_spans = render::render_spans(&statusline_line);
 
-    let statusline = Paragraph::new(Line::from(spans));
-    f.render_widget(statusline, layout[1]);
+    let lines = vec![
+        // Top margin
+        Line::from(""),
+        // Row 0: Gaussian Row 1 + Title
+        Line::from(vec![
+            Span::raw("      "),
+            Span::styled("▄", Style::default().fg(Color::Rgb(219, 177, 49))),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(242, 146, 46))
+                    .bg(Color::Rgb(246, 145, 46)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(240, 114, 54))
+                    .bg(Color::Rgb(243, 115, 55)),
+            ),
+            Span::styled("▄", Style::default().fg(Color::Rgb(240, 88, 59))),
+            Span::raw("        "),
+            Span::styled(
+                format!("Antigravity CLI {}", version),
+                Style::default()
+                    .fg(COLOR_TITLE)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        // Row 1: Gaussian Row 2 + Account
+        Line::from(vec![
+            Span::raw("     "),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(158, 195, 69))
+                    .bg(Color::Rgb(134, 198, 78)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(181, 180, 62))
+                    .bg(Color::Rgb(117, 180, 94)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(226, 153, 61))
+                    .bg(Color::Rgb(204, 149, 77)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(246, 122, 52))
+                    .bg(Color::Rgb(239, 121, 71)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(248, 106, 53))
+                    .bg(Color::Rgb(225, 102, 82)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(239, 84, 66))
+                    .bg(Color::Rgb(225, 79, 89)),
+            ),
+            Span::raw("       "),
+            Span::styled(user_info, Style::default().fg(COLOR_MUTED)),
+        ]),
+        // Row 2: Gaussian Row 3 + Model
+        Line::from(vec![
+            Span::raw("    "),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(124, 194, 81))
+                    .bg(Color::Rgb(128, 198, 84)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(113, 194, 92))
+                    .bg(Color::Rgb(84, 184, 129)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(92, 169, 143))
+                    .bg(Color::Rgb(64, 151, 222)),
+            ),
+            Span::styled("▀", Style::default().fg(Color::Rgb(92, 145, 179))),
+            Span::styled("▀", Style::default().fg(Color::Rgb(131, 115, 176))),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(116, 111, 195))
+                    .bg(Color::Rgb(74, 126, 228)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(153, 93, 168))
+                    .bg(Color::Rgb(112, 110, 206)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(156, 91, 151))
+                    .bg(Color::Rgb(143, 100, 180)),
+            ),
+            Span::raw("      "),
+            Span::styled("Gemini 3.7 Flash (High)", Style::default().fg(COLOR_MUTED)),
+        ]),
+        // Row 3: Gaussian Row 4 + CWD
+        Line::from(vec![
+            Span::raw("   "),
+            Span::styled("▄", Style::default().fg(Color::Rgb(109, 198, 148))),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(97, 195, 125))
+                    .bg(Color::Rgb(98, 186, 213)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(67, 174, 171))
+                    .bg(Color::Rgb(71, 168, 220)),
+            ),
+            Span::raw("    "),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(74, 128, 234))
+                    .bg(Color::Rgb(61, 137, 251)),
+            ),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(108, 115, 216))
+                    .bg(Color::Rgb(74, 129, 240)),
+            ),
+            Span::styled("▄", Style::default().fg(Color::Rgb(101, 121, 225))),
+            Span::raw("     "),
+            Span::styled(cwd, Style::default().fg(COLOR_MUTED)),
+        ]),
+        // Row 4: Gaussian Row 5 (Feet)
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled("▄", Style::default().fg(Color::Rgb(103, 185, 244))),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(107, 199, 163))
+                    .bg(Color::Rgb(100, 182, 246)),
+            ),
+            Span::styled("▀", Style::default().fg(Color::Rgb(100, 182, 246))),
+            Span::raw("      "),
+            Span::styled("▀", Style::default().fg(Color::Rgb(56, 134, 251))),
+            Span::styled(
+                "▀",
+                Style::default()
+                    .fg(Color::Rgb(72, 129, 244))
+                    .bg(Color::Rgb(56, 131, 249)),
+            ),
+            Span::styled("▄", Style::default().fg(Color::Rgb(61, 133, 252))),
+        ]),
+        // Row 5: Blank line
+        Line::from(""),
+        // Row 6: Top rule
+        Line::from(Span::styled(
+            "─".repeat(width),
+            Style::default().fg(COLOR_BORDER),
+        )),
+        // Row 7: Prompt
+        Line::from(Span::styled(">", Style::default().fg(COLOR_PROMPT))),
+        // Row 8: Bottom rule
+        Line::from(Span::styled(
+            "─".repeat(width),
+            Style::default().fg(COLOR_BORDER),
+        )),
+        // Row 9: Live statusline
+        Line::from(statusline_spans),
+    ];
+
+    let widget = Paragraph::new(Text::from(lines));
+    f.render_widget(widget, area);
 }
 
 /// Height needed for the banner + statusline.
