@@ -3,10 +3,10 @@ use crate::config::theme::UserTheme;
 use crate::config::types::{
     AnsiColor, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
     DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
-    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, MODEL_OPTION_SHOW_EFFORT,
-    PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode,
-    USAGE_OPTION_VALUE, UsageValue, WORKTREE_OPTION_OUTSIDE_WORKTREES,
-    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
+    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, MODEL_OPTION_REPLACE,
+    MODEL_OPTION_SEARCH, MODEL_OPTION_SHOW_EFFORT, PR_OPTION_OSC_HYPERLINKS,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode, USAGE_OPTION_VALUE, UsageValue,
+    WORKTREE_OPTION_OUTSIDE_WORKTREES, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 use crate::core::ring_cursor::RingCursor;
 use crate::data::icon_catalog::{IconCatalogData, IconPickerTab};
@@ -74,6 +74,8 @@ pub enum NameInputPurpose {
     SaveAs,
     Rename,
     HostnameRstrip,
+    ModelSearch,
+    ModelReplace,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -651,6 +653,28 @@ impl App {
                         FieldSelection::ThinkingIcon => {
                             self.open_icon_picker(IconPickerPurpose::ThinkingIcon);
                         }
+                        FieldSelection::ModelSearch => {
+                            let value = self.theme.components[self.selected_component]
+                                .options
+                                .get(MODEL_OPTION_SEARCH)
+                                .and_then(|value| value.as_str())
+                                .unwrap_or_default()
+                                .to_owned();
+                            self.name_input_open = true;
+                            self.name_input_buffer = value;
+                            self.name_input_purpose = NameInputPurpose::ModelSearch;
+                        }
+                        FieldSelection::ModelReplace => {
+                            let value = self.theme.components[self.selected_component]
+                                .options
+                                .get(MODEL_OPTION_REPLACE)
+                                .and_then(|value| value.as_str())
+                                .unwrap_or_default()
+                                .to_owned();
+                            self.name_input_open = true;
+                            self.name_input_buffer = value;
+                            self.name_input_purpose = NameInputPurpose::ModelReplace;
+                        }
                         FieldSelection::FlashIcon => {
                             self.open_icon_picker(IconPickerPurpose::FlashIcon);
                         }
@@ -892,6 +916,28 @@ impl App {
                             comp.options
                                 .insert("rstrip".into(), serde_json::Value::String(value));
                             self.status_message = Some("Hostname RStrip updated".into());
+                            self.mark_dirty();
+                        }
+                    }
+                    NameInputPurpose::ModelSearch => {
+                        let value = self.name_input_buffer.to_owned();
+                        if let Some(comp) = self.theme.components.get_mut(self.selected_component) {
+                            comp.options.insert(
+                                MODEL_OPTION_SEARCH.into(),
+                                serde_json::Value::String(value),
+                            );
+                            self.status_message = Some("Model Search pattern updated".into());
+                            self.mark_dirty();
+                        }
+                    }
+                    NameInputPurpose::ModelReplace => {
+                        let value = self.name_input_buffer.to_owned();
+                        if let Some(comp) = self.theme.components.get_mut(self.selected_component) {
+                            comp.options.insert(
+                                MODEL_OPTION_REPLACE.into(),
+                                serde_json::Value::String(value),
+                            );
+                            self.status_message = Some("Model Replacement updated".into());
                             self.mark_dirty();
                         }
                     }
@@ -1870,6 +1916,8 @@ impl App {
                 NameInputPurpose::SaveAs => "Save As",
                 NameInputPurpose::Rename => "Rename",
                 NameInputPurpose::HostnameRstrip => "RStrip",
+                NameInputPurpose::ModelSearch => "Search Regex",
+                NameInputPurpose::ModelReplace => "Replacement",
             };
             super::widgets::name_input::render(f, f.area(), title, &self.name_input_buffer);
         }
@@ -1892,14 +1940,15 @@ impl App {
 
 #[cfg(test)]
 mod tests {
-    use super::{App, FieldSelection, Panel};
+    use super::{App, FieldSelection, NameInputPurpose, Panel};
     use crate::config::theme::UserTheme;
     use crate::config::types::{
-        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, MODEL_OPTION_SHOW_EFFORT,
-        PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
-        USAGE_OPTION_VALUE, WORKTREE_OPTION_OUTSIDE_WORKTREES,
+        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, MODEL_OPTION_REPLACE, MODEL_OPTION_SEARCH,
+        MODEL_OPTION_SHOW_EFFORT, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE,
+        PR_OPTION_SHOW_URL, USAGE_OPTION_VALUE, WORKTREE_OPTION_OUTSIDE_WORKTREES,
         WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH,
     };
+    use crossterm::event::KeyCode;
 
     #[test]
     fn pull_request_editor_toggles_each_option_independently() {
@@ -2091,6 +2140,61 @@ mod tests {
         assert_eq!(effort(&app).as_deref(), Some("hide"));
         app.toggle_current();
         assert_eq!(effort(&app).as_deref(), Some("show"));
+    }
+
+    #[test]
+    fn model_editor_edits_search_and_replace() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+
+        app.selected_component = app
+            .theme
+            .components
+            .iter()
+            .position(|component| component.id == ComponentId::Model)
+            .unwrap();
+        app.selected_panel.set(&Panel::Editor);
+
+        // Edit Search
+        app.selected_field = FieldSelection::ModelSearch;
+        app.toggle_current();
+        assert!(app.name_input_open);
+        assert_eq!(app.name_input_purpose, NameInputPurpose::ModelSearch);
+
+        for c in "Gemini (\\d+)".chars() {
+            app.handle_name_input(KeyCode::Char(c), false);
+        }
+        app.handle_name_input(KeyCode::Enter, false);
+        assert!(!app.name_input_open);
+
+        let search = app.theme.components[app.selected_component]
+            .options
+            .get(MODEL_OPTION_SEARCH)
+            .and_then(|v| v.as_str())
+            .unwrap();
+        assert_eq!(search, "Gemini (\\d+)");
+
+        // Edit Replace
+        app.selected_field = FieldSelection::ModelReplace;
+        app.toggle_current();
+        assert!(app.name_input_open);
+        assert_eq!(app.name_input_purpose, NameInputPurpose::ModelReplace);
+
+        for c in "G-$1".chars() {
+            app.handle_name_input(KeyCode::Char(c), false);
+        }
+        app.handle_name_input(KeyCode::Enter, false);
+        assert!(!app.name_input_open);
+
+        let replace = app.theme.components[app.selected_component]
+            .options
+            .get(MODEL_OPTION_REPLACE)
+            .and_then(|v| v.as_str())
+            .unwrap();
+        assert_eq!(replace, "G-$1");
     }
 
     #[test]

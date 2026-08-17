@@ -2,9 +2,9 @@ use crate::config::theme::UserTheme;
 use crate::config::types::{
     AnsiColor, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
     DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
-    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
-    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, UsageValue,
-    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
+    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, MODEL_OPTION_REPLACE,
+    MODEL_OPTION_SEARCH, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+    UsageValue, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 use crate::core::render;
 use ratatui::{
@@ -32,6 +32,8 @@ pub enum FieldSelection {
     PerModelIcons,
     EffortLevel,
     ThinkingIcon,
+    ModelSearch,
+    ModelReplace,
     FlashIcon,
     ProIcon,
     UltraIcon,
@@ -58,6 +60,8 @@ impl FieldSelection {
                 fields.push(Self::PerModelIcons);
                 fields.push(Self::EffortLevel);
                 fields.push(Self::ThinkingIcon);
+                fields.push(Self::ModelSearch);
+                fields.push(Self::ModelReplace);
                 fields.push(Self::FlashIcon);
                 fields.push(Self::ProIcon);
                 fields.push(Self::UltraIcon);
@@ -73,6 +77,8 @@ impl FieldSelection {
                 fields.push(Self::PerModelIcons);
                 fields.push(Self::EffortLevel);
                 fields.push(Self::ThinkingIcon);
+                fields.push(Self::ModelSearch);
+                fields.push(Self::ModelReplace);
             }
         } else {
             fields.push(Self::PlainIcon);
@@ -270,6 +276,24 @@ impl EditorWidget {
                     "Thinking Icon",
                     comp.options
                         .get("thinking_icon")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default()
+                        .into(),
+                    None,
+                ),
+                FieldSelection::ModelSearch => (
+                    "Search",
+                    comp.options
+                        .get(MODEL_OPTION_SEARCH)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default()
+                        .into(),
+                    None,
+                ),
+                FieldSelection::ModelReplace => (
+                    "Replace",
+                    comp.options
+                        .get(MODEL_OPTION_REPLACE)
                         .and_then(|v| v.as_str())
                         .unwrap_or_default()
                         .into(),
@@ -549,5 +573,17 @@ mod tests {
         assert!(FieldSelection::fields_for(five_hour).contains(&FieldSelection::UsageValue));
         assert!(FieldSelection::fields_for(seven_day).contains(&FieldSelection::UsageValue));
         assert!(!FieldSelection::fields_for(context).contains(&FieldSelection::UsageValue));
+    }
+
+    #[test]
+    fn model_search_and_replace_are_only_available_for_model() {
+        let theme = UserTheme::default_theme();
+        let model = theme.get_component(ComponentId::Model).unwrap();
+        let directory = theme.get_component(ComponentId::Directory).unwrap();
+
+        assert!(FieldSelection::fields_for(model).contains(&FieldSelection::ModelSearch));
+        assert!(FieldSelection::fields_for(model).contains(&FieldSelection::ModelReplace));
+        assert!(!FieldSelection::fields_for(directory).contains(&FieldSelection::ModelSearch));
+        assert!(!FieldSelection::fields_for(directory).contains(&FieldSelection::ModelReplace));
     }
 }

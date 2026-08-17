@@ -8,6 +8,8 @@ pub struct ModelComponent {
     per_model: Option<PerModelIcons>,
     effort: ModelEffort,
     thinking_icon: String,
+    search: String,
+    replace: String,
 }
 
 impl ModelComponent {
@@ -27,6 +29,16 @@ impl ModelComponent {
 
     pub fn with_thinking_icon(mut self, thinking_icon: String) -> Self {
         self.thinking_icon = thinking_icon;
+        self
+    }
+
+    pub fn with_search(mut self, search: impl Into<String>) -> Self {
+        self.search = search.into();
+        self
+    }
+
+    pub fn with_replace(mut self, replace: impl Into<String>) -> Self {
+        self.replace = replace.into();
         self
     }
 
@@ -69,7 +81,17 @@ impl ModelComponent {
 
 impl Component for ModelComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
-        let display_name = Self::format_display_name(&input.model.display_name);
+        let formatted_name = Self::format_display_name(&input.model.display_name);
+        let display_name = if !self.search.is_empty() {
+            if let Ok(re) = regex::Regex::new(&self.search) {
+                re.replace_all(&formatted_name, self.replace.as_str())
+                    .into_owned()
+            } else {
+                formatted_name
+            }
+        } else {
+            formatted_name
+        };
         let show_effort = self.effort.should_display(input.model.is_third_party());
         let effort_code = if show_effort {
             input
@@ -199,5 +221,41 @@ mod tests {
         let tp_comp = ModelComponent::new().with_effort(ModelEffort::ThirdParty);
         assert_eq!(tp_comp.collect(&gemini_input).unwrap().secondary, "");
         assert_eq!(tp_comp.collect(&claude_input).unwrap().secondary, "h");
+    }
+
+    #[test]
+    fn test_model_search_and_replace_with_backreferences() {
+        use crate::core::components::Component;
+        use crate::core::input::{InputData, Model};
+
+        let input = InputData {
+            model: Model {
+                id: "Gemini 3.7 Flash (High)".into(),
+                display_name: "Gemini 3.7 Flash (High)".into(),
+                effort: Some("high".into()),
+            },
+            ..Default::default()
+        };
+
+        // Numbered capture groups
+        let comp = ModelComponent::new()
+            .with_search(r"Gemini ([\d.]+)\s+(\w+).*")
+            .with_replace("G-$1-$2");
+        let data = comp.collect(&input).unwrap();
+        assert_eq!(data.primary, "G-3.7-Flash");
+
+        // Named capture groups
+        let comp_named = ModelComponent::new()
+            .with_search(r"Gemini (?P<ver>[\d.]+)\s+(?P<tier>\w+).*")
+            .with_replace("G-${ver}-${tier}");
+        let data_named = comp_named.collect(&input).unwrap();
+        assert_eq!(data_named.primary, "G-3.7-Flash");
+
+        // Invalid regex gracefully falls back to unmodified string
+        let comp_invalid = ModelComponent::new()
+            .with_search(r"[unclosed-bracket")
+            .with_replace("something");
+        let data_invalid = comp_invalid.collect(&input).unwrap();
+        assert_eq!(data_invalid.primary, "Gemini 3.7 Flash (High)");
     }
 }

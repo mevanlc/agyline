@@ -17,6 +17,8 @@ pub const DEFAULT_PR_OSC_HYPERLINKS: bool = true;
 pub const USAGE_OPTION_VALUE: &str = "value";
 pub const MODEL_OPTION_SHOW_EFFORT: &str = "show_effort";
 pub const DEFAULT_MODEL_SHOW_EFFORT: &str = "show";
+pub const MODEL_OPTION_SEARCH: &str = "search";
+pub const MODEL_OPTION_REPLACE: &str = "replace";
 
 /// What the Worktree component displays when Claude is not in a worktree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
