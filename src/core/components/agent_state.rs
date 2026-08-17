@@ -43,7 +43,7 @@ mod tests {
     fn collects_agent_state() {
         let input: InputData = serde_json::from_value(serde_json::json!({
             "agent_state": "working",
-            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp"}
         }))
         .unwrap();

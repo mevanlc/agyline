@@ -42,7 +42,7 @@ mod tests {
     #[test]
     fn collects_tool_confirmation_when_pending() {
         let input: InputData = serde_json::from_value(serde_json::json!({
-            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp"},
             "tool_confirmation_pending": true
         }))
@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn returns_none_when_not_pending() {
         let input: InputData = serde_json::from_value(serde_json::json!({
-            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp"},
             "tool_confirmation_pending": false
         }))

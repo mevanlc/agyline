@@ -49,7 +49,7 @@ You can also manually edit `~/.gemini/antigravity-cli/settings.json`:
 ```
 
 ## Config Directory
-By default, `agyline` stores its configuration in `~/.gemini/antigravity-cli/agyline` (with fallback to `XLINE_CONFIG_DIR`). Override the config directory with `--config-dir`:
+By default, `agyline` stores its configuration in `~/.config/agyline` (with fallback to `XLINE_CONFIG_DIR`). Override the config directory with `--config-dir`:
 ```bash
 agyline --config-dir /tmp/agyline-test
 ```

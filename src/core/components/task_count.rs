@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn collects_task_count() {
         let input: InputData = serde_json::from_value(serde_json::json!({
-            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp"},
             "task_count": 2
         }))
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn suppresses_zero_by_default() {
         let input: InputData = serde_json::from_value(serde_json::json!({
-            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp"},
             "task_count": 0
         }))

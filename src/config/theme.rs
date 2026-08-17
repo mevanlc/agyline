@@ -63,7 +63,7 @@ impl UserTheme {
                 styles: TextStyleConfig { text_bold: false },
                 options: std::collections::HashMap::from([(
                     MODEL_OPTION_SHOW_EFFORT.into(),
-                    serde_json::Value::Bool(DEFAULT_MODEL_SHOW_EFFORT),
+                    serde_json::Value::String(DEFAULT_MODEL_SHOW_EFFORT.into()),
                 )]),
             },
             ComponentConfig {
@@ -112,22 +112,6 @@ impl UserTheme {
                 colors: ColorConfig {
                     icon: Some(AnsiColor::Color16 { c16: 11 }),
                     text: Some(AnsiColor::Color16 { c16: 11 }),
-                    background: None,
-                },
-                styles: TextStyleConfig { text_bold: false },
-                options: Default::default(),
-            },
-            ComponentConfig {
-                id: Quota,
-                enabled: true,
-                icon: IconConfig {
-                    per_model: None,
-                    plain: "\u{1f4ca}".into(),     // 📊
-                    nerd_font: "\u{f051f}".into(), // 󰔟
-                },
-                colors: ColorConfig {
-                    icon: Some(AnsiColor::Color16 { c16: 13 }),
-                    text: Some(AnsiColor::Color16 { c16: 13 }),
                     background: None,
                 },
                 styles: TextStyleConfig { text_bold: false },
@@ -470,6 +454,7 @@ impl UserTheme {
     /// Add components introduced after this theme was saved, preserving the
     /// theme's existing component order and placing additions in default order.
     pub fn add_missing_components(&mut self) {
+        self.components.retain(|c| c.id != ComponentId::Unknown);
         let defaults = Self::default_theme().components;
 
         for (index, default) in defaults.iter().enumerate() {
@@ -581,12 +566,10 @@ mod tests {
         let theme = UserTheme::default_theme();
         let git = theme.get_component(ComponentId::Git).unwrap();
         let state = theme.get_component(ComponentId::AgentState).unwrap();
-        let quota = theme.get_component(ComponentId::Quota).unwrap();
         let task_count = theme.get_component(ComponentId::TaskCount).unwrap();
 
         assert!(state.enabled);
         assert!(git.enabled);
-        assert!(quota.enabled);
         assert!(task_count.enabled);
         assert_eq!(
             git.options
@@ -604,11 +587,8 @@ mod tests {
         assert!(model.enabled);
         assert!(model.icon.per_model.as_ref().is_some_and(|pm| pm.enabled));
         assert_eq!(
-            model
-                .options
-                .get(MODEL_OPTION_SHOW_EFFORT)
-                .and_then(|value| value.as_bool()),
-            Some(true)
+            crate::config::types::ModelEffort::from_options(&model.options),
+            crate::config::types::ModelEffort::Show
         );
     }
 

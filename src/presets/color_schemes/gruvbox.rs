@@ -37,15 +37,6 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
-                Quota,
-                ComponentColors {
-                    icon: Some(Color256 { c256: 175 }),
-                    text: Some(Color256 { c256: 175 }),
-                    background: None,
-                    text_bold: true,
-                },
-            ),
-            (
                 TaskCount,
                 ComponentColors {
                     icon: Some(Color256 { c256: 214 }),

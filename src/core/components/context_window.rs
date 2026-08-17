@@ -129,8 +129,9 @@ mod tests {
     fn input(context_window: Option<ContextWindow>) -> InputData {
         InputData {
             model: Model {
-                id: "claude-sonnet-4-5".into(),
-                display_name: "Sonnet 4.5".into(),
+                id: "Gemini 3.7 Flash (High)".into(),
+                display_name: "Gemini 3.7 Flash (High)".into(),
+                ..Default::default()
             },
             workspace: Workspace {
                 current_dir: "/tmp/project".into(),

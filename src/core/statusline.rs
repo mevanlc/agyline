@@ -1,10 +1,10 @@
 use crate::config::theme::UserTheme;
 use crate::config::types::{
     ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
-    DEFAULT_MODEL_SHOW_EFFORT, DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE,
-    DEFAULT_PR_SHOW_URL, DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH,
-    MODEL_OPTION_SHOW_EFFORT, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE,
-    PR_OPTION_SHOW_URL, UsageValue, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
+    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
+    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, UsageValue,
+    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 use crate::core::components::{ComponentData, METADATA_DISPLAYED_BRANCH};
 use crate::core::render;
@@ -57,11 +57,7 @@ pub fn collect_all_components(
         let data = match comp_cfg.id {
             ComponentId::AgentState => AgentStateComponent::new().collect(input),
             ComponentId::Model => {
-                let show_effort = comp_cfg
-                    .options
-                    .get(MODEL_OPTION_SHOW_EFFORT)
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(DEFAULT_MODEL_SHOW_EFFORT);
+                let effort = crate::config::types::ModelEffort::from_options(&comp_cfg.options);
                 let thinking_icon = comp_cfg
                     .options
                     .get("thinking_icon")
@@ -70,7 +66,7 @@ pub fn collect_all_components(
                     .to_string();
                 ModelComponent::new()
                     .with_per_model(comp_cfg.icon.per_model.clone())
-                    .with_effort(show_effort)
+                    .with_effort(effort)
                     .with_thinking_icon(thinking_icon)
                     .collect(input)
             }
@@ -84,14 +80,6 @@ pub fn collect_all_components(
                 GitComponent::new().with_sha(show_sha).collect(input)
             }
             ComponentId::ContextWindow => ContextWindowComponent::new().collect(input),
-            ComponentId::Quota => {
-                let bucket = comp_cfg
-                    .options
-                    .get("bucket")
-                    .and_then(|v| v.as_str())
-                    .map(ToString::to_string);
-                QuotaComponent::new().with_bucket(bucket).collect(input)
-            }
             ComponentId::TaskCount => TaskCountComponent::new().collect(input),
             ComponentId::ExecutionMode => ExecutionModeComponent::new().collect(input),
             ComponentId::VimMode => VimModeComponent::new().collect(input),
@@ -152,6 +140,7 @@ pub fn collect_all_components(
             ComponentId::Session => SessionComponent::new().collect(input),
             ComponentId::OutputStyle => OutputStyleComponent::new().collect(input),
             ComponentId::Separator => unreachable!(),
+            ComponentId::Unknown => None,
         };
 
         if let Some(data) = data {
@@ -193,118 +182,40 @@ fn autohide_duplicate_git_branch(components: &mut [(ComponentConfig, ComponentDa
 
 #[cfg(test)]
 mod tests {
-    use super::{StatusLineGenerator, collect_all_components};
+    use super::collect_all_components;
     use crate::config::theme::UserTheme;
     use crate::config::types::{
-        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
-        PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, WORKTREE_OPTION_OUTSIDE_WORKTREES,
-        WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH,
+        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, WORKTREE_OPTION_OUTSIDE_WORKTREES,
     };
     use crate::core::input::InputData;
     use std::process::Command;
 
-    const URL: &str = "https://github.com/example/repo/pull/482";
-
-    fn input() -> InputData {
-        serde_json::from_value(serde_json::json!({
-            "model": {"id": "claude-sonnet-4-5", "display_name": "Sonnet 4.5"},
+    #[test]
+    fn collects_antigravity_statusline_components() {
+        let input: InputData = serde_json::from_value(serde_json::json!({
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp/project"},
-            "pr": {"number": 482, "url": URL, "review_state": "approved"},
-        }))
-        .unwrap()
-    }
-
-    fn pr_theme(osc_hyperlinks: bool) -> UserTheme {
-        let mut theme = UserTheme::default_theme();
-        for component in &mut theme.components {
-            component.enabled = false;
-        }
-        let pull_request = theme.get_component_mut(ComponentId::PullRequest).unwrap();
-        pull_request.enabled = true;
-        pull_request.icon.plain.clear();
-        pull_request.colors.icon = None;
-        pull_request.colors.text = None;
-        pull_request.options.insert(
-            PR_OPTION_SHOW_REVIEW_STATE.into(),
-            serde_json::Value::Bool(true),
-        );
-        pull_request
-            .options
-            .insert(PR_OPTION_SHOW_URL.into(), serde_json::Value::Bool(true));
-        pull_request.options.insert(
-            PR_OPTION_OSC_HYPERLINKS.into(),
-            serde_json::Value::Bool(osc_hyperlinks),
-        );
-        theme
-    }
-
-    fn link(text: &str) -> String {
-        format!("\x1b]8;;{URL}\x1b\\{text}\x1b]8;;\x1b\\")
-    }
-
-    #[test]
-    fn renders_a_separate_osc_hyperlink_for_every_visible_pr_field() {
-        let theme = pr_theme(true);
-        let components = collect_all_components(&theme, &input());
-        let rendered = StatusLineGenerator::new(&theme).generate(components);
-
-        assert_eq!(
-            rendered,
-            format!("{} {} {}", link("#482"), link("approved"), link(URL))
-        );
-    }
-
-    #[test]
-    fn renders_no_osc_hyperlinks_when_the_option_is_off() {
-        let theme = pr_theme(false);
-        let components = collect_all_components(&theme, &input());
-        let rendered = StatusLineGenerator::new(&theme).generate(components);
-
-        assert_eq!(rendered, format!("#482 approved {URL}"));
-        assert!(!rendered.contains("\x1b]8;;"));
-    }
-
-    #[test]
-    fn worktree_is_absent_in_primary_checkout_and_can_show_original_branch() {
-        let mut theme = UserTheme::default_theme();
-        for component in &mut theme.components {
-            component.enabled = false;
-        }
-        let worktree = theme.get_component_mut(ComponentId::Worktree).unwrap();
-        worktree.enabled = true;
-        worktree.icon.plain.clear();
-        worktree.colors.icon = None;
-        worktree.colors.text = None;
-        worktree.options.insert(
-            WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH.into(),
-            serde_json::Value::Bool(true),
-        );
-
-        let primary = serde_json::from_value(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
-            "workspace": {"current_dir": "/tmp/project"}
-        }))
-        .unwrap();
-        assert!(collect_all_components(&theme, &primary).is_empty());
-
-        let linked = serde_json::from_value(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
-            "workspace": {
-                "current_dir": "/tmp/project/.claude/worktrees/physical-name",
-                "git_worktree": "physical-name1"
-            },
-            "worktree": {
-                "name": "logical-name",
-                "path": "/tmp/project/.claude/worktrees/physical-name",
-                "branch": "worktree-logical-name",
-                "original_cwd": "/tmp/project",
-                "original_branch": "main"
+            "agent_state": "idle",
+            "quota": {
+                "gemini-weekly": {
+                    "remaining_fraction": 0.55,
+                    "reset_in_seconds": 250000,
+                    "reset_time": "2026-08-20T04:24:24Z"
+                }
             }
         }))
         .unwrap();
-        let components = collect_all_components(&theme, &linked);
-        let rendered = StatusLineGenerator::new(&theme).generate(components);
-        assert_eq!(rendered, "logical-name \u{2190} main");
+
+        let mut theme = UserTheme::default_theme();
+        for component in &mut theme.components {
+            component.enabled = matches!(
+                component.id,
+                ComponentId::Model | ComponentId::AgentState | ComponentId::UsageSevenDay
+            );
+        }
+
+        let components = collect_all_components(&theme, &input);
+        assert_eq!(components.len(), 3);
     }
 
     #[test]

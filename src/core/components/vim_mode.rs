@@ -43,7 +43,7 @@ mod tests {
     #[test]
     fn collects_vim_mode() {
         let input: InputData = serde_json::from_value(serde_json::json!({
-            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp"},
             "vim": {"mode": "NORMAL"}
         }))

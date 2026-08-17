@@ -71,6 +71,7 @@ mod tests {
             model: Model {
                 id: "test".into(),
                 display_name: "Test".into(),
+                ..Default::default()
             },
             workspace: Workspace {
                 current_dir: "/tmp".into(),

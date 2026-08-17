@@ -16,7 +16,7 @@ pub const DEFAULT_PR_SHOW_URL: bool = false;
 pub const DEFAULT_PR_OSC_HYPERLINKS: bool = true;
 pub const USAGE_OPTION_VALUE: &str = "value";
 pub const MODEL_OPTION_SHOW_EFFORT: &str = "show_effort";
-pub const DEFAULT_MODEL_SHOW_EFFORT: bool = true;
+pub const DEFAULT_MODEL_SHOW_EFFORT: &str = "show";
 
 /// What the Worktree component displays when Claude is not in a worktree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -91,8 +91,8 @@ impl fmt::Display for WorktreeOutside {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UsageValue {
-    #[default]
     Used,
+    #[default]
     Remaining,
 }
 
@@ -146,6 +146,81 @@ impl fmt::Display for UsageValue {
     }
 }
 
+/// What effort level indicator to display for the model component.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ModelEffort {
+    #[default]
+    Show,
+    Gemini,
+    ThirdParty,
+    Hide,
+}
+
+impl ModelEffort {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::Show => "Yes",
+            Self::Gemini => "Gemini",
+            Self::ThirdParty => "Third Party",
+            Self::Hide => "No",
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Show => "show",
+            Self::Gemini => "gemini",
+            Self::ThirdParty => "third_party",
+            Self::Hide => "hide",
+        }
+    }
+
+    pub fn toggled(self) -> Self {
+        match self {
+            Self::Show => Self::Gemini,
+            Self::Gemini => Self::ThirdParty,
+            Self::ThirdParty => Self::Hide,
+            Self::Hide => Self::Show,
+        }
+    }
+
+    pub fn from_options(options: &HashMap<String, serde_json::Value>) -> Self {
+        if let Some(val) = options.get(MODEL_OPTION_SHOW_EFFORT) {
+            if let Some(b) = val.as_bool() {
+                return if b { Self::Show } else { Self::Hide };
+            }
+            if let Some(s) = val.as_str() {
+                return match s.to_ascii_lowercase().as_str() {
+                    "show" | "yes" | "true" => Self::Show,
+                    "gemini" | "gemini_only" | "1p" => Self::Gemini,
+                    "third_party" | "thirdparty" | "3p" | "3p_only" | "third_party_only" => {
+                        Self::ThirdParty
+                    }
+                    "hide" | "no" | "false" => Self::Hide,
+                    _ => Self::default(),
+                };
+            }
+        }
+        Self::default()
+    }
+
+    pub fn should_display(self, is_third_party: bool) -> bool {
+        match self {
+            Self::Show => true,
+            Self::Gemini => !is_third_party,
+            Self::ThirdParty => is_third_party,
+            Self::Hide => false,
+        }
+    }
+}
+
+impl fmt::Display for ModelEffort {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.display_name())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ComponentId {
@@ -154,7 +229,6 @@ pub enum ComponentId {
     Directory,
     Git,
     ContextWindow,
-    Quota,
     TaskCount,
     ExecutionMode,
     VimMode,
@@ -175,6 +249,8 @@ pub enum ComponentId {
     Session,
     OutputStyle,
     Separator,
+    #[serde(other)]
+    Unknown,
 }
 
 impl ComponentId {
@@ -185,7 +261,6 @@ impl ComponentId {
         ComponentId::Directory,
         ComponentId::Git,
         ComponentId::ContextWindow,
-        ComponentId::Quota,
         ComponentId::TaskCount,
         ComponentId::ExecutionMode,
         ComponentId::VimMode,
@@ -213,7 +288,6 @@ impl ComponentId {
             ComponentId::Directory => "Directory",
             ComponentId::Git => "Git Status",
             ComponentId::ContextWindow => "Context Window",
-            ComponentId::Quota => "Quota",
             ComponentId::TaskCount => "Task Count",
             ComponentId::ExecutionMode => "Execution Mode",
             ComponentId::VimMode => "Vim Mode",
@@ -232,6 +306,7 @@ impl ComponentId {
             ComponentId::Session => "Session",
             ComponentId::OutputStyle => "Output Style",
             ComponentId::Separator => "Separator",
+            ComponentId::Unknown => "Unknown",
         }
     }
 
@@ -244,7 +319,6 @@ impl ComponentId {
             ComponentId::Directory => "Current working directory",
             ComponentId::Git => "Branch, dirty indicator, and upstream status from VCS",
             ComponentId::ContextWindow => "Context window token usage percentage",
-            ComponentId::Quota => "Model/bucket quota usage and reset timer",
             ComponentId::TaskCount => "Number of active background tasks",
             ComponentId::ExecutionMode => "Current prompt execution mode (planning, fast)",
             ComponentId::VimMode => "Active Vim editor mode (NORMAL, INSERT, VISUAL)",
@@ -263,6 +337,7 @@ impl ComponentId {
             ComponentId::Session => "Elapsed time in current session",
             ComponentId::OutputStyle => "Response verbosity mode",
             ComponentId::Separator => "Divider between left and right sides",
+            ComponentId::Unknown => "Unknown or deprecated component",
         }
     }
 
@@ -273,7 +348,6 @@ impl ComponentId {
             ComponentId::Directory => "Directory",
             ComponentId::Git => "Git",
             ComponentId::ContextWindow => "Ctx Window",
-            ComponentId::Quota => "Quota",
             ComponentId::TaskCount => "Tasks",
             ComponentId::ExecutionMode => "Exec Mode",
             ComponentId::VimMode => "Vim",
@@ -290,8 +364,9 @@ impl ComponentId {
             ComponentId::UsageSevenDay => "Usage (7d)",
             ComponentId::Cost => "Cost",
             ComponentId::Session => "Session",
-            ComponentId::OutputStyle => "Output",
-            ComponentId::Separator => "Separator",
+            ComponentId::OutputStyle => "Style",
+            ComponentId::Separator => "Sep",
+            ComponentId::Unknown => "?",
         }
     }
 }
@@ -544,7 +619,6 @@ mod tests {
             "\"usage_7d\""
         );
         assert_eq!(ComponentId::AgentState.display_name(), "Agent State");
-        assert_eq!(ComponentId::Quota.display_name(), "Quota");
         assert_eq!(ComponentId::TaskCount.display_name(), "Task Count");
         assert_eq!(ComponentId::ExecutionMode.display_name(), "Execution Mode");
         assert_eq!(ComponentId::VimMode.display_name(), "Vim Mode");

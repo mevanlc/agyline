@@ -28,13 +28,6 @@ pub fn icon_set() -> IconSet {
                 },
             ), // 📂 / 󰚝 md-folder_star
             (
-                Quota,
-                ComponentIcons {
-                    plain: "\u{1f313}",
-                    nerd_font: "\u{f051f}",
-                },
-            ), // 🌓 / 󰔟
-            (
                 TaskCount,
                 ComponentIcons {
                     plain: "\u{2699}\u{fe0f}",

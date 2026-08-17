@@ -1,6 +1,6 @@
 use super::{Component, ComponentData};
 use crate::config::types::{ComponentId, UsageValue};
-use crate::core::input::{InputData, RateLimitWindow};
+use crate::core::input::InputData;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -35,27 +35,28 @@ impl SevenDayUsageComponent {
     }
 }
 
-fn collect_window(
+fn collect_quota_window(
     label: &str,
-    window: Option<&RateLimitWindow>,
+    bucket: Option<&crate::core::input::QuotaBucket>,
     value: UsageValue,
 ) -> Option<ComponentData> {
-    let window = window?;
-    let percentage = window.used_percentage?;
-    let displayed = value.apply(percentage);
-    let value = if displayed.fract() == 0.0 {
+    let bucket = bucket?;
+    let fraction = bucket.remaining_fraction?;
+    let used_percentage = ((1.0 - fraction) * 100.0).clamp(0.0, 100.0);
+    let displayed = value.apply(used_percentage);
+    let value_str = if displayed.fract() == 0.0 {
         format!("{displayed:.0}")
     } else {
         format!("{displayed:.1}")
     };
 
-    let mut metadata = HashMap::from([("percentage".into(), percentage.to_string())]);
-    if let Some(resets_at) = window.resets_at {
-        metadata.insert("resets_at".into(), resets_at.to_string());
+    let mut metadata = HashMap::from([("percentage".into(), used_percentage.to_string())]);
+    if let Some(reset_sec) = bucket.reset_in_seconds {
+        metadata.insert("reset_in_seconds".into(), reset_sec.to_string());
     }
 
     Some(ComponentData {
-        primary: format!("{label} {value}%"),
+        primary: format!("{label} {value_str}%"),
         secondary: String::new(),
         metadata,
     })
@@ -63,14 +64,22 @@ fn collect_window(
 
 impl Component for FiveHourUsageComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
-        collect_window(
-            "5h",
-            input
-                .rate_limits
-                .as_ref()
-                .and_then(|limits| limits.five_hour.as_ref()),
-            self.value,
-        )
+        let quota = input.quota.as_ref()?;
+        let is_3p = input.model.is_third_party();
+
+        let bucket = if is_3p {
+            quota
+                .get("3p-5h")
+                .or_else(|| quota.get("gemini-5h"))
+                .or_else(|| quota.get("5h"))
+        } else {
+            quota
+                .get("gemini-5h")
+                .or_else(|| quota.get("3p-5h"))
+                .or_else(|| quota.get("5h"))
+        };
+
+        collect_quota_window("5h", bucket, self.value)
     }
 
     fn id(&self) -> ComponentId {
@@ -80,14 +89,24 @@ impl Component for FiveHourUsageComponent {
 
 impl Component for SevenDayUsageComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
-        collect_window(
-            "7d",
-            input
-                .rate_limits
-                .as_ref()
-                .and_then(|limits| limits.seven_day.as_ref()),
-            self.value,
-        )
+        let quota = input.quota.as_ref()?;
+        let is_3p = input.model.is_third_party();
+
+        let bucket = if is_3p {
+            quota
+                .get("3p-weekly")
+                .or_else(|| quota.get("gemini-weekly"))
+                .or_else(|| quota.get("weekly"))
+                .or_else(|| quota.get("7d"))
+        } else {
+            quota
+                .get("gemini-weekly")
+                .or_else(|| quota.get("3p-weekly"))
+                .or_else(|| quota.get("weekly"))
+                .or_else(|| quota.get("7d"))
+        };
+
+        collect_quota_window("7d", bucket, self.value)
     }
 
     fn id(&self) -> ComponentId {
@@ -99,96 +118,90 @@ impl Component for SevenDayUsageComponent {
 mod tests {
     use super::{Component, FiveHourUsageComponent, SevenDayUsageComponent};
     use crate::config::types::UsageValue;
-    use crate::core::input::{InputData, Model, RateLimitWindow, RateLimits, Workspace};
+    use crate::core::input::InputData;
 
-    fn input(rate_limits: Option<RateLimits>) -> InputData {
-        InputData {
-            model: Model {
-                id: "claude-sonnet-4-5".into(),
-                display_name: "Sonnet 4.5".into(),
-            },
-            workspace: Workspace {
-                current_dir: "/tmp/project".into(),
-                ..Default::default()
-            },
-            rate_limits,
-            ..Default::default()
-        }
-    }
-
-    fn both_windows() -> InputData {
-        input(Some(RateLimits {
-            five_hour: Some(RateLimitWindow {
-                used_percentage: Some(23.5),
-                resets_at: Some(1_738_425_600),
-            }),
-            seven_day: Some(RateLimitWindow {
-                used_percentage: Some(41.2),
-                resets_at: Some(1_738_857_600),
-            }),
+    #[test]
+    fn test_antigravity_quota_for_5h_and_7d() {
+        let input: InputData = serde_json::from_value(serde_json::json!({
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
+            "workspace": {"current_dir": "/tmp"},
+            "quota": {
+                "gemini-5h": {
+                    "remaining_fraction": 0.914,
+                    "reset_in_seconds": 14550,
+                    "reset_time": "2026-08-17T08:23:39Z"
+                },
+                "gemini-weekly": {
+                    "remaining_fraction": 0.554,
+                    "reset_in_seconds": 259390,
+                    "reset_time": "2026-08-20T04:24:24Z"
+                }
+            }
         }))
-    }
+        .unwrap();
 
-    #[test]
-    fn five_hour_component_displays_only_five_hour_usage() {
-        let data = FiveHourUsageComponent::new()
-            .collect(&both_windows())
+        let five_hour_default = FiveHourUsageComponent::new().collect(&input).unwrap();
+        assert_eq!(five_hour_default.primary, "5h 91.4%");
+
+        let five_hour_rem = FiveHourUsageComponent::new()
+            .with_value(UsageValue::Remaining)
+            .collect(&input)
             .unwrap();
+        assert_eq!(five_hour_rem.primary, "5h 91.4%");
 
-        assert_eq!(data.primary, "5h 23.5%");
-        assert!(data.secondary.is_empty());
-        assert_eq!(data.metadata.get("resets_at").unwrap(), "1738425600");
-    }
-
-    #[test]
-    fn seven_day_component_displays_only_seven_day_usage() {
-        let data = SevenDayUsageComponent::new()
-            .collect(&both_windows())
+        let five_hour_used = FiveHourUsageComponent::new()
+            .with_value(UsageValue::Used)
+            .collect(&input)
             .unwrap();
+        assert_eq!(five_hour_used.primary, "5h 8.6%");
 
-        assert_eq!(data.primary, "7d 41.2%");
-        assert!(data.secondary.is_empty());
-        assert_eq!(data.metadata.get("resets_at").unwrap(), "1738857600");
+        let seven_day_rem = SevenDayUsageComponent::new()
+            .with_value(UsageValue::Remaining)
+            .collect(&input)
+            .unwrap();
+        assert_eq!(seven_day_rem.primary, "7d 55.4%");
     }
 
     #[test]
-    fn remaining_value_inverts_the_reported_percentage() {
-        let input = both_windows();
+    fn test_antigravity_3p_model_quota_switching() {
+        let input: InputData = serde_json::from_value(serde_json::json!({
+            "model": {"id": "claude-3-7-sonnet", "display_name": "Claude 3.7 Sonnet"},
+            "workspace": {"current_dir": "/tmp"},
+            "quota": {
+                "3p-5h": {
+                    "remaining_fraction": 1.0,
+                    "reset_in_seconds": 18000,
+                    "reset_time": "2026-08-17T09:21:00Z"
+                },
+                "3p-weekly": {
+                    "remaining_fraction": 0.666,
+                    "reset_in_seconds": 286000,
+                    "reset_time": "2026-08-20T11:57:07Z"
+                },
+                "gemini-5h": {
+                    "remaining_fraction": 0.914,
+                    "reset_in_seconds": 14550,
+                    "reset_time": "2026-08-17T08:23:39Z"
+                },
+                "gemini-weekly": {
+                    "remaining_fraction": 0.554,
+                    "reset_in_seconds": 259390,
+                    "reset_time": "2026-08-20T04:24:24Z"
+                }
+            }
+        }))
+        .unwrap();
 
         let five_hour = FiveHourUsageComponent::new()
             .with_value(UsageValue::Remaining)
             .collect(&input)
             .unwrap();
+        assert_eq!(five_hour.primary, "5h 100%");
+
         let seven_day = SevenDayUsageComponent::new()
             .with_value(UsageValue::Remaining)
             .collect(&input)
             .unwrap();
-
-        assert_eq!(five_hour.primary, "5h 76.5%");
-        assert_eq!(seven_day.primary, "7d 58.8%");
-        assert_eq!(five_hour.metadata.get("percentage").unwrap(), "23.5");
-    }
-
-    #[test]
-    fn each_component_requires_its_own_window_percentage() {
-        let input = input(Some(RateLimits {
-            five_hour: Some(RateLimitWindow {
-                used_percentage: None,
-                resets_at: Some(1_738_425_600),
-            }),
-            seven_day: Some(RateLimitWindow {
-                used_percentage: Some(40.0),
-                resets_at: None,
-            }),
-        }));
-
-        assert!(FiveHourUsageComponent::new().collect(&input).is_none());
-        assert_eq!(
-            SevenDayUsageComponent::new()
-                .collect(&input)
-                .unwrap()
-                .primary,
-            "7d 40%"
-        );
+        assert_eq!(seven_day.primary, "7d 66.6%");
     }
 }

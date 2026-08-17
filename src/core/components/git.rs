@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn collects_native_vcs_payload_clean() {
         let input: InputData = serde_json::from_value(serde_json::json!({
-            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp"},
             "vcs": {
                 "type": "git",
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn collects_native_vcs_payload_dirty() {
         let input: InputData = serde_json::from_value(serde_json::json!({
-            "model": {"id": "gemini-flash", "display_name": "Flash"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp"},
             "vcs": {
                 "type": "git",

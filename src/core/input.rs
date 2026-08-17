@@ -26,26 +26,28 @@ pub struct InputData {
     pub terminal_width: Option<u32>,
     pub execution_mode: Option<String>,
     pub vim: Option<VimState>,
-    pub worktree: Option<Worktree>,
-    pub effort: Option<Effort>,
-    pub thinking: Option<Thinking>,
-    pub rate_limits: Option<RateLimits>,
-    pub pr: Option<PullRequest>,
-    pub cost: Option<Cost>,
-    pub output_style: Option<OutputStyle>,
 }
 
 #[derive(Deserialize, Default, Clone)]
 pub struct Model {
     pub id: String,
     pub display_name: String,
+    pub effort: Option<String>,
+}
+
+impl Model {
+    pub fn is_third_party(&self) -> bool {
+        let id = self.id.to_ascii_lowercase();
+        let name = self.display_name.to_ascii_lowercase();
+
+        !id.contains("gemini") && !name.contains("gemini")
+    }
 }
 
 #[derive(Deserialize, Default, Clone)]
 pub struct Workspace {
     pub current_dir: String,
     pub project_dir: Option<String>,
-    pub git_worktree: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -75,25 +77,6 @@ pub struct VimState {
 }
 
 #[derive(Deserialize, Clone)]
-pub struct Worktree {
-    pub name: String,
-    pub path: String,
-    pub branch: Option<String>,
-    pub original_cwd: String,
-    pub original_branch: Option<String>,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct Effort {
-    pub level: Option<String>,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct Thinking {
-    pub enabled: Option<bool>,
-}
-
-#[derive(Deserialize, Clone)]
 pub struct ContextWindow {
     pub total_input_tokens: Option<u64>,
     pub total_output_tokens: Option<u64>,
@@ -111,111 +94,9 @@ pub struct CurrentUsage {
     pub cache_read_input_tokens: Option<u64>,
 }
 
-#[derive(Deserialize, Clone)]
-pub struct RateLimits {
-    pub five_hour: Option<RateLimitWindow>,
-    pub seven_day: Option<RateLimitWindow>,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct RateLimitWindow {
-    pub used_percentage: Option<f64>,
-    pub resets_at: Option<u64>,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct PullRequest {
-    pub number: u64,
-    pub url: String,
-    pub review_state: Option<String>,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct Cost {
-    pub total_cost_usd: Option<f64>,
-    pub total_duration_ms: Option<u64>,
-    pub total_api_duration_ms: Option<u64>,
-    pub total_lines_added: Option<u32>,
-    pub total_lines_removed: Option<u32>,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct OutputStyle {
-    pub name: String,
-}
-
 #[cfg(test)]
 mod tests {
     use super::InputData;
-
-    #[test]
-    fn deserializes_native_context_rate_limit_pull_request_and_worktree_payloads() {
-        let input: InputData = serde_json::from_str(
-            r#"{
-                "model": {"id": "claude-sonnet-4-5", "display_name": "Sonnet 4.5"},
-                "workspace": {
-                    "current_dir": "/tmp/project/.claude/worktrees/refactor",
-                    "git_worktree": "refactor"
-                },
-                "worktree": {
-                    "name": "refactor",
-                    "path": "/tmp/project/.claude/worktrees/refactor",
-                    "branch": "worktree-refactor",
-                    "original_cwd": "/tmp/project",
-                    "original_branch": "main"
-                },
-                "effort": null,
-                "thinking": null,
-                "context_window": {
-                    "total_input_tokens": 15500,
-                    "total_output_tokens": 1200,
-                    "context_window_size": 200000,
-                    "used_percentage": 8,
-                    "remaining_percentage": 92,
-                    "current_usage": {
-                        "input_tokens": 8500,
-                        "output_tokens": 1200,
-                        "cache_creation_input_tokens": 5000,
-                        "cache_read_input_tokens": 2000
-                    }
-                },
-                "rate_limits": {
-                    "five_hour": {"used_percentage": 23.5, "resets_at": 1738425600},
-                    "seven_day": {"used_percentage": 41.2, "resets_at": 1738857600}
-                },
-                "pr": {
-                    "number": 482,
-                    "url": "https://github.com/example/repo/pull/482",
-                    "review_state": "approved"
-                },
-                "cost": null,
-                "output_style": null
-            }"#,
-        )
-        .unwrap();
-
-        let context = input.context_window.unwrap();
-        assert_eq!(context.total_input_tokens, Some(15_500));
-        assert_eq!(
-            context.current_usage.unwrap().cache_read_input_tokens,
-            Some(2_000)
-        );
-
-        let limits = input.rate_limits.unwrap();
-        assert_eq!(limits.five_hour.unwrap().used_percentage, Some(23.5));
-        assert_eq!(limits.seven_day.unwrap().resets_at, Some(1_738_857_600));
-
-        let pr = input.pr.unwrap();
-        assert_eq!(pr.number, 482);
-        assert_eq!(pr.url, "https://github.com/example/repo/pull/482");
-        assert_eq!(pr.review_state.as_deref(), Some("approved"));
-
-        assert_eq!(input.workspace.git_worktree.as_deref(), Some("refactor"));
-        let worktree = input.worktree.unwrap();
-        assert_eq!(worktree.name, "refactor");
-        assert_eq!(worktree.branch.as_deref(), Some("worktree-refactor"));
-        assert_eq!(worktree.original_branch.as_deref(), Some("main"));
-    }
 
     #[test]
     fn deserializes_official_antigravity_payload() {
@@ -225,8 +106,9 @@ mod tests {
             "conversation_id": "12345678-abcd-ef01-2345-6789abcdef01",
             "transcript_path": "/home/user/.gemini/antigravity/brain/12345678-abcd-ef01-2345-6789abcdef01/.system_generated/logs/transcript.jsonl",
             "model": {
-                "id": "Gemini 3.5 Flash (High)",
-                "display_name": "Gemini 3.5 Flash (High)"
+                "id": "Gemini 3.7 Flash (High)",
+                "display_name": "Gemini 3.7 Flash (High)",
+                "effort": "high"
             },
             "workspace": {
                 "current_dir": "/home/user/my-project",
@@ -278,7 +160,8 @@ mod tests {
             input.conversation_id.as_deref(),
             Some("12345678-abcd-ef01-2345-6789abcdef01")
         );
-        assert_eq!(input.model.display_name, "Gemini 3.5 Flash (High)");
+        assert_eq!(input.model.display_name, "Gemini 3.7 Flash (High)");
+        assert_eq!(input.model.effort.as_deref(), Some("high"));
         assert_eq!(input.agent_state.as_deref(), Some("idle"));
         assert_eq!(input.task_count, Some(1));
         assert_eq!(input.artifact_count, Some(2));

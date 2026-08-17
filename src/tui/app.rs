@@ -2,11 +2,11 @@ use crate::config::manager;
 use crate::config::theme::UserTheme;
 use crate::config::types::{
     AnsiColor, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
-    DEFAULT_MODEL_SHOW_EFFORT, DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE,
-    DEFAULT_PR_SHOW_URL, DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH,
-    MODEL_OPTION_SHOW_EFFORT, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE,
-    PR_OPTION_SHOW_URL, StyleMode, USAGE_OPTION_VALUE, UsageValue,
-    WORKTREE_OPTION_OUTSIDE_WORKTREES, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
+    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
+    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, MODEL_OPTION_SHOW_EFFORT,
+    PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, StyleMode,
+    USAGE_OPTION_VALUE, UsageValue, WORKTREE_OPTION_OUTSIDE_WORKTREES,
+    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 use crate::core::ring_cursor::RingCursor;
 use crate::data::icon_catalog::{IconCatalogData, IconPickerTab};
@@ -637,19 +637,15 @@ impl App {
                         }
                         FieldSelection::EffortLevel => {
                             let comp = &mut self.theme.components[self.selected_component];
-                            let enabled = comp
-                                .options
-                                .get(MODEL_OPTION_SHOW_EFFORT)
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(DEFAULT_MODEL_SHOW_EFFORT);
+                            let next =
+                                crate::config::types::ModelEffort::from_options(&comp.options)
+                                    .toggled();
                             comp.options.insert(
                                 MODEL_OPTION_SHOW_EFFORT.into(),
-                                serde_json::Value::Bool(!enabled),
+                                serde_json::Value::String(next.as_str().into()),
                             );
-                            self.status_message = Some(format!(
-                                "Effort level {}",
-                                if enabled { "disabled" } else { "enabled" }
-                            ));
+                            self.status_message =
+                                Some(format!("Effort level {}", next.display_name()));
                             self.mark_dirty();
                         }
                         FieldSelection::ThinkingIcon => {
@@ -1899,9 +1895,10 @@ mod tests {
     use super::{App, FieldSelection, Panel};
     use crate::config::theme::UserTheme;
     use crate::config::types::{
-        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
-        PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, USAGE_OPTION_VALUE,
-        WORKTREE_OPTION_OUTSIDE_WORKTREES, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH,
+        ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, MODEL_OPTION_SHOW_EFFORT,
+        PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
+        USAGE_OPTION_VALUE, WORKTREE_OPTION_OUTSIDE_WORKTREES,
+        WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH,
     };
 
     #[test]
@@ -2053,10 +2050,47 @@ mod tests {
             };
 
             app.toggle_current();
-            assert_eq!(value(&app).as_deref(), Some("remaining"));
-            app.toggle_current();
             assert_eq!(value(&app).as_deref(), Some("used"));
+            app.toggle_current();
+            assert_eq!(value(&app).as_deref(), Some("remaining"));
         }
+    }
+
+    #[test]
+    fn model_editor_cycles_the_effort_setting() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+
+        app.selected_component = app
+            .theme
+            .components
+            .iter()
+            .position(|component| component.id == ComponentId::Model)
+            .unwrap();
+        app.selected_panel.set(&Panel::Editor);
+        app.selected_field = FieldSelection::EffortLevel;
+
+        let effort = |app: &App| {
+            app.theme.components[app.selected_component]
+                .options
+                .get(MODEL_OPTION_SHOW_EFFORT)
+                .and_then(|value| value.as_str())
+                .map(str::to_owned)
+        };
+
+        // Default is "show"
+        assert_eq!(effort(&app).as_deref(), Some("show"));
+        app.toggle_current();
+        assert_eq!(effort(&app).as_deref(), Some("gemini"));
+        app.toggle_current();
+        assert_eq!(effort(&app).as_deref(), Some("third_party"));
+        app.toggle_current();
+        assert_eq!(effort(&app).as_deref(), Some("hide"));
+        app.toggle_current();
+        assert_eq!(effort(&app).as_deref(), Some("show"));
     }
 
     #[test]

@@ -29,26 +29,17 @@ impl WorktreeComponent {
 
 impl Component for WorktreeComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
-        let (name, displays_branch) = if let Some(worktree) = &input.worktree {
-            (worktree.name.clone(), false)
-        } else if input.workspace.git_worktree.is_some() {
-            (
+        let (name, displays_branch) = match self.outside_worktrees {
+            WorktreeOutside::Hide => return None,
+            WorktreeOutside::Show => ("-".into(), false),
+            WorktreeOutside::Branch => (
+                GitComponent::branch_name(&input.workspace.current_dir)?,
+                true,
+            ),
+            WorktreeOutside::Directory => (
                 DirectoryComponent::directory_name(&input.workspace.current_dir),
                 false,
-            )
-        } else {
-            match self.outside_worktrees {
-                WorktreeOutside::Hide => return None,
-                WorktreeOutside::Show => ("-".into(), false),
-                WorktreeOutside::Branch => (
-                    GitComponent::branch_name(&input.workspace.current_dir)?,
-                    true,
-                ),
-                WorktreeOutside::Directory => (
-                    DirectoryComponent::directory_name(&input.workspace.current_dir),
-                    false,
-                ),
-            }
+            ),
         };
 
         if name.is_empty() {
@@ -59,36 +50,10 @@ impl Component for WorktreeComponent {
         if displays_branch {
             metadata.insert(METADATA_DISPLAYED_BRANCH.into(), name.clone());
         }
-        if let Some(git_worktree) = &input.workspace.git_worktree {
-            metadata.insert("git_worktree".into(), git_worktree.clone());
-        }
-        if let Some(worktree) = &input.worktree {
-            metadata.insert("name".into(), worktree.name.clone());
-            metadata.insert("path".into(), worktree.path.clone());
-            metadata.insert("original_cwd".into(), worktree.original_cwd.clone());
-            if let Some(branch) = &worktree.branch {
-                metadata.insert("branch".into(), branch.clone());
-            }
-            if let Some(original_branch) = &worktree.original_branch {
-                metadata.insert("original_branch".into(), original_branch.clone());
-            }
-        }
-
-        let secondary = if self.show_original_branch {
-            input
-                .worktree
-                .as_ref()
-                .and_then(|worktree| worktree.original_branch.as_deref())
-                .filter(|branch| !branch.is_empty())
-                .map(|branch| format!("\u{2190} {branch}"))
-                .unwrap_or_default()
-        } else {
-            String::new()
-        };
 
         Some(ComponentData {
             primary: name,
-            secondary,
+            secondary: String::new(),
             metadata,
         })
     }
@@ -111,9 +76,9 @@ mod tests {
     }
 
     #[test]
-    fn suppresses_itself_in_the_primary_checkout() {
+    fn suppresses_itself_in_hide_mode() {
         let input = input(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp/project"}
         }));
 
@@ -126,70 +91,9 @@ mod tests {
     }
 
     #[test]
-    fn rich_worktree_name_wins_over_path_and_git_admin_name() {
-        let input = input(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
-            "workspace": {
-                "current_dir": "/tmp/project/.claude/worktrees/actual-directory",
-                "git_worktree": "actual-directory1"
-            },
-            "worktree": {
-                "name": "logical-name",
-                "path": "/tmp/project/.claude/worktrees/actual-directory",
-                "branch": "worktree-logical-name",
-                "original_cwd": "/tmp/project",
-                "original_branch": "main"
-            }
-        }));
-
-        let data = WorktreeComponent::new().collect(&input).unwrap();
-        assert_eq!(data.primary, "logical-name");
-        assert!(data.secondary.is_empty());
-        assert_eq!(
-            data.metadata.get("git_worktree").map(String::as_str),
-            Some("actual-directory1")
-        );
-    }
-
-    #[test]
-    fn legacy_worktree_uses_current_directory_basename_not_git_admin_name() {
-        let input = input(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
-            "workspace": {
-                "current_dir": "C:\\repos\\shared\\",
-                "git_worktree": "shared1"
-            }
-        }));
-
-        let data = WorktreeComponent::new().collect(&input).unwrap();
-        assert_eq!(data.primary, "shared");
-    }
-
-    #[test]
-    fn original_branch_is_the_only_optional_display_field() {
-        let input = input(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
-            "workspace": {"current_dir": "/tmp/hook-target"},
-            "worktree": {
-                "name": "logical-name",
-                "path": "/tmp/hook-target",
-                "original_cwd": "/tmp/non-git-origin",
-                "original_branch": "main"
-            }
-        }));
-
-        let data = WorktreeComponent::new()
-            .with_original_branch(true)
-            .collect(&input)
-            .unwrap();
-        assert_eq!(data.primary, "logical-name");
-        assert_eq!(data.secondary, "\u{2190} main");
-    }
-
-    #[test]
     fn show_mode_keeps_the_component_visible_as_a_seatbelt() {
         let input = input(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": "/tmp/project"}
         }));
 
@@ -203,8 +107,8 @@ mod tests {
     #[test]
     fn directory_mode_matches_the_directory_component() {
         let input = input(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
-            "workspace": {"current_dir": "C:\\repos\\project\\"}
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
+            "workspace": {"current_dir": "/repos/project"}
         }));
 
         let data = WorktreeComponent::new()
@@ -224,7 +128,7 @@ mod tests {
             .unwrap();
         assert!(status.success());
         let input = input(serde_json::json!({
-            "model": {"id": "sonnet", "display_name": "Sonnet"},
+            "model": {"id": "Gemini 3.7 Flash (High)", "display_name": "Gemini 3.7 Flash (High)", "effort": "high"},
             "workspace": {"current_dir": repo.path()}
         }));
 

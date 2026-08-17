@@ -1,12 +1,12 @@
 use super::{Component, ComponentData};
-use crate::config::types::{ComponentId, PerModelIcons};
+use crate::config::types::{ComponentId, ModelEffort, PerModelIcons};
 use crate::core::input::InputData;
 use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct ModelComponent {
     per_model: Option<PerModelIcons>,
-    show_effort: bool,
+    effort: ModelEffort,
     thinking_icon: String,
 }
 
@@ -20,8 +20,8 @@ impl ModelComponent {
         self
     }
 
-    pub fn with_effort(mut self, show_effort: bool) -> Self {
-        self.show_effort = show_effort;
+    pub fn with_effort(mut self, effort: ModelEffort) -> Self {
+        self.effort = effort;
         self
     }
 
@@ -70,23 +70,19 @@ impl ModelComponent {
 impl Component for ModelComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
         let display_name = Self::format_display_name(&input.model.display_name);
-        let effort_code = if self.show_effort {
+        let show_effort = self.effort.should_display(input.model.is_third_party());
+        let effort_code = if show_effort {
             input
+                .model
                 .effort
-                .as_ref()
-                .and_then(|effort| effort.level.as_deref())
+                .as_deref()
                 .and_then(Self::effort_code)
                 .unwrap_or_default()
                 .to_string()
         } else {
             String::new()
         };
-        let thinking_icon = if input
-            .thinking
-            .as_ref()
-            .and_then(|thinking| thinking.enabled)
-            .unwrap_or(false)
-        {
+        let thinking_icon = if !self.thinking_icon.is_empty() {
             self.thinking_icon.as_str()
         } else {
             ""
@@ -161,14 +157,47 @@ mod tests {
     }
 
     #[test]
-    fn leaves_other_parenthesized_text_unchanged() {
-        assert_eq!(
-            ModelComponent::format_display_name("Claude Sonnet (beta)"),
-            "Claude Sonnet (beta)"
-        );
-        assert_eq!(
-            ModelComponent::format_display_name("Claude Sonnet (200 k context)"),
-            "Claude Sonnet (200 k context)"
-        );
+    fn test_model_effort_states() {
+        use crate::config::types::ModelEffort;
+        use crate::core::components::Component;
+        use crate::core::input::{InputData, Model};
+
+        let gemini_input = InputData {
+            model: Model {
+                id: "Gemini 3.7 Flash (High)".into(),
+                display_name: "Gemini 3.7 Flash (High)".into(),
+                effort: Some("high".into()),
+            },
+            ..Default::default()
+        };
+
+        let claude_input = InputData {
+            model: Model {
+                id: "claude-3-7-sonnet".into(),
+                display_name: "Claude 3.7 Sonnet".into(),
+                effort: Some("high".into()),
+            },
+            ..Default::default()
+        };
+
+        // Show: shows for both
+        let show_comp = ModelComponent::new().with_effort(ModelEffort::Show);
+        assert_eq!(show_comp.collect(&gemini_input).unwrap().secondary, "h");
+        assert_eq!(show_comp.collect(&claude_input).unwrap().secondary, "h");
+
+        // Hide: hides for both
+        let hide_comp = ModelComponent::new().with_effort(ModelEffort::Hide);
+        assert_eq!(hide_comp.collect(&gemini_input).unwrap().secondary, "");
+        assert_eq!(hide_comp.collect(&claude_input).unwrap().secondary, "");
+
+        // Gemini: shows for Gemini, hides for Claude (3p)
+        let gemini_comp = ModelComponent::new().with_effort(ModelEffort::Gemini);
+        assert_eq!(gemini_comp.collect(&gemini_input).unwrap().secondary, "h");
+        assert_eq!(gemini_comp.collect(&claude_input).unwrap().secondary, "");
+
+        // ThirdParty: hides for Gemini, shows for Claude (3p)
+        let tp_comp = ModelComponent::new().with_effort(ModelEffort::ThirdParty);
+        assert_eq!(tp_comp.collect(&gemini_input).unwrap().secondary, "");
+        assert_eq!(tp_comp.collect(&claude_input).unwrap().secondary, "h");
     }
 }

@@ -1,10 +1,10 @@
 use crate::config::theme::UserTheme;
 use crate::config::types::{
     AnsiColor, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
-    DEFAULT_MODEL_SHOW_EFFORT, DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE,
-    DEFAULT_PR_SHOW_URL, DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH,
-    MODEL_OPTION_SHOW_EFFORT, PR_OPTION_OSC_HYPERLINKS, PR_OPTION_SHOW_REVIEW_STATE,
-    PR_OPTION_SHOW_URL, UsageValue, WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
+    DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
+    DEFAULT_WORKTREE_SHOW_ORIGINAL_BRANCH, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_OSC_HYPERLINKS,
+    PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL, UsageValue,
+    WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH, WorktreeOutside,
 };
 use crate::core::render;
 use ratatui::{
@@ -263,12 +263,8 @@ impl EditorWidget {
                     ("Per-Model", if enabled { "Yes" } else { "No" }.into(), None)
                 }
                 FieldSelection::EffortLevel => {
-                    let enabled = comp
-                        .options
-                        .get(MODEL_OPTION_SHOW_EFFORT)
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(DEFAULT_MODEL_SHOW_EFFORT);
-                    ("Effort", if enabled { "Yes" } else { "No" }.into(), None)
+                    let effort = crate::config::types::ModelEffort::from_options(&comp.options);
+                    ("Effort", effort.display_name().into(), None)
                 }
                 FieldSelection::ThinkingIcon => (
                     "Thinking Icon",

@@ -28,13 +28,6 @@ pub fn icon_set() -> IconSet {
                 },
             ), // ◐
             (
-                Quota,
-                ComponentIcons {
-                    plain: "%",
-                    nerd_font: "%",
-                },
-            ),
-            (
                 TaskCount,
                 ComponentIcons {
                     plain: "#",

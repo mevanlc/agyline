@@ -62,23 +62,6 @@ pub fn scheme() -> ColorScheme {
                 },
             ),
             (
-                Quota,
-                ComponentColors {
-                    icon: Some(AnsiColor::Rgb {
-                        r: 145,
-                        g: 191,
-                        b: 183,
-                    }),
-                    text: Some(AnsiColor::Rgb {
-                        r: 145,
-                        g: 191,
-                        b: 183,
-                    }),
-                    background: None,
-                    text_bold: false,
-                },
-            ),
-            (
                 TaskCount,
                 ComponentColors {
                     icon: Some(AnsiColor::Rgb {

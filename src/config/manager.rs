@@ -21,7 +21,7 @@ pub fn set_config_dir_override(path: PathBuf) -> Result<(), PathBuf> {
 /// Get the agyline config directory.
 ///
 /// Precedence is: command-line override, `AGYLINE_CONFIG_DIR`, `XLINE_CONFIG_DIR`,
-/// then `~/.gemini/antigravity-cli/agyline`.
+/// then `~/.config/agyline`.
 pub fn config_dir() -> PathBuf {
     if let Some(path) = config_dir_override(
         CONFIG_DIR_OVERRIDE.get().map(PathBuf::as_path),
@@ -45,20 +45,20 @@ fn config_dir_override(cli: Option<&Path>, env: Option<&OsStr>) -> Option<PathBu
 }
 
 fn default_config_dir(home: &Path) -> PathBuf {
-    home.join(".gemini").join("antigravity-cli").join("agyline")
+    home.join(".config").join("agyline")
 }
 
 /// Get the path to the Antigravity settings.json file.
 pub fn agy_settings_path() -> PathBuf {
-    agy_settings_path_for_config_dir(&config_dir())
+    let home = dirs::home_dir().expect("could not determine home directory");
+    agy_settings_path_for_home(&home)
 }
 
-/// Get the path to settings.json relative to a given agyline config directory.
-pub fn agy_settings_path_for_config_dir(config_dir: &Path) -> PathBuf {
-    config_dir
-        .parent()
-        .map(|p| p.join("settings.json"))
-        .unwrap_or_else(|| config_dir.join("settings.json"))
+/// Get the path to settings.json relative to a given home directory.
+pub fn agy_settings_path_for_home(home: &Path) -> PathBuf {
+    home.join(".gemini")
+        .join("antigravity-cli")
+        .join("settings.json")
 }
 
 /// Get the themes directory beneath the agyline config directory.
@@ -633,10 +633,7 @@ mod tests {
     fn config_dir_defaults_beneath_home() {
         let resolved = default_config_dir(Path::new("/home/tester"));
 
-        assert_eq!(
-            resolved,
-            Path::new("/home/tester/.gemini/antigravity-cli/agyline")
-        );
+        assert_eq!(resolved, Path::new("/home/tester/.config/agyline"));
     }
 
     #[test]

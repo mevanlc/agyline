@@ -246,7 +246,6 @@ pub fn demo_texts_full() -> HashMap<ComponentId, SegmentText> {
             ComponentId::ContextWindow,
             ("14% \u{b7} 88k tokens".into(), String::new()),
         ),
-        (ComponentId::Quota, ("weekly 94%".into(), String::new())),
         (ComponentId::TaskCount, ("1 task".into(), String::new())),
         (
             ComponentId::ExecutionMode,
