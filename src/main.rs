@@ -24,6 +24,7 @@ fn print_help() {
     println!("ENVIRONMENT:");
     println!("    AGYLINE_CONFIG_DIR        Override the agyline config directory");
     println!("    XLINE_CONFIG_DIR          Legacy fallback config directory");
+    println!("    AGYLINE_LOG_FILE          Append incoming JSON payloads to log file");
 }
 
 fn config_dir_arg(args: &[String]) -> Result<Option<PathBuf>, &'static str> {
@@ -191,12 +192,77 @@ fn main() {
     }
 }
 
+pub const LOG_FILE_ENV: &str = "AGYLINE_LOG_FILE";
+
+fn iso_timestamp_zulu() -> String {
+    let now = std::time::SystemTime::now();
+    let duration = now
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    let total_secs = duration.as_secs();
+    let millis = duration.subsec_millis();
+
+    let days = total_secs / 86400;
+    let rem_secs = total_secs % 86400;
+    let hours = rem_secs / 3600;
+    let minutes = (rem_secs % 3600) / 60;
+    let seconds = rem_secs % 60;
+
+    let z = days as i64 + 719468;
+    let era = (if z >= 0 { z } else { z - 146096 }) / 146097;
+    let doe = (z - era * 146097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = if m <= 2 { y + 1 } else { y };
+
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+        year, m, d, hours, minutes, seconds, millis
+    )
+}
+
+fn log_payload_to_file(log_path: &str, raw_json: &str) {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+    use std::path::Path;
+
+    let pretty_json = match serde_json::from_str::<serde_json::Value>(raw_json) {
+        Ok(val) => {
+            serde_json::to_string_pretty(&val).unwrap_or_else(|_| raw_json.trim().to_string())
+        }
+        Err(_) => raw_json.trim().to_string(),
+    };
+
+    let timestamp = iso_timestamp_zulu();
+    let entry = format!("/* {} */\n{}\n\n", timestamp, pretty_json);
+
+    let path = Path::new(log_path);
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
+        let _ = file.write_all(entry.as_bytes());
+    }
+}
+
 fn run_statusline() {
     // Read JSON from stdin
     let mut input_str = String::new();
     if let Err(e) = io::stdin().read_to_string(&mut input_str) {
         eprintln!("agyline: stdin read error: {}", e);
         std::process::exit(1);
+    }
+
+    // If AGYLINE_LOG_FILE is set, append payload to the file
+    if let Ok(log_path) = std::env::var(LOG_FILE_ENV)
+        && !log_path.is_empty()
+    {
+        log_payload_to_file(&log_path, &input_str);
     }
 
     let input: agyline::core::input::InputData = match serde_json::from_str(&input_str) {
@@ -279,5 +345,43 @@ mod tests {
     #[test]
     fn config_dir_arg_ignores_unrelated_arguments() {
         assert_eq!(config_dir_arg(&args(&["--install-themes"])), Ok(None));
+    }
+
+    #[test]
+    fn test_iso_timestamp_zulu_format() {
+        let ts = iso_timestamp_zulu();
+        assert!(ts.ends_with('Z'));
+        assert_eq!(ts.len(), 24); // e.g. "2026-08-17T04:16:52.294Z"
+        assert_eq!(&ts[10..11], "T");
+        assert_eq!(&ts[4..5], "-");
+        assert_eq!(&ts[7..8], "-");
+        assert_eq!(&ts[13..14], ":");
+        assert_eq!(&ts[16..17], ":");
+        assert_eq!(&ts[19..20], ".");
+    }
+
+    #[test]
+    fn test_log_payload_to_file_appends_formatted_entry() {
+        let dir = tempfile::tempdir().unwrap();
+        let log_file = dir.path().join("test_payloads.log");
+        let log_path = log_file.to_str().unwrap();
+
+        let json1 = r#"{"model":{"id":"gemini-3.5-flash"},"task_count":1}"#;
+        log_payload_to_file(log_path, json1);
+
+        let json2 = r#"{"agent_state":"working","artifact_count":2}"#;
+        log_payload_to_file(log_path, json2);
+
+        let contents = std::fs::read_to_string(&log_file).unwrap();
+
+        // Check for 2 header blocks
+        assert_eq!(contents.matches("/* 20").count(), 2);
+        assert!(contents.contains("/* 20"));
+        assert!(contents.contains("Z */"));
+
+        // Check that JSON is pretty-printed with 2 spaces
+        assert!(contents.contains("  \"model\": {\n    \"id\": \"gemini-3.5-flash\"\n  }"));
+        assert!(contents.contains("  \"agent_state\": \"working\""));
+        assert!(contents.contains("  \"artifact_count\": 2"));
     }
 }

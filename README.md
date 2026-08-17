@@ -59,6 +59,25 @@ Or via environment variable:
 AGYLINE_CONFIG_DIR=/tmp/agyline-test agyline
 ```
 
+## Payload Logging
+To inspect raw JSON state payloads piped to `agyline`, set the `AGYLINE_LOG_FILE` environment variable to a file path:
+```bash
+AGYLINE_LOG_FILE=~/.gemini/antigravity-cli/statusline-payloads.log agyline
+```
+Incoming payloads will be formatted and appended with UTC ISO-8601 timestamps:
+```
+/* 2026-08-17T04:16:43.123Z */
+{
+  "agent_state": "idle",
+  "cwd": "/Users/user/code/my-project",
+  "model": {
+    "display_name": "Gemini 3.5 Flash",
+    "id": "gemini-3.5-flash"
+  }
+}
+```
+
 ## Inspiration
 This project drew inspiration from [CCometixLine](https://github.com/Haleclipse/CCometixLine).
+
 
