@@ -28,13 +28,13 @@ agyline
 Quickly configure Antigravity CLI to use `agyline`:
 ```bash
 # Configure statusLine in ~/.gemini/antigravity-cli/settings.json
-agyline --agy-setup
+agyline --setup
 
 # Overwrite if a different statusLine command is already configured
-agyline --agy-setup-force
+agyline --setup-force
 
 # Remove agyline from settings.json
-agyline --agy-unsetup
+agyline --unsetup
 ```
 
 ### Manual Configuration

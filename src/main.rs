@@ -15,11 +15,11 @@ fn print_help() {
     println!("    -V, --version             Print version");
     println!("    --config-dir <path>       Use a different agyline config directory");
     println!("    --install-themes          Install/reinstall default themes");
-    println!("    --agy-setup               Configure Antigravity CLI settings to use agyline");
+    println!("    --setup                   Configure Antigravity CLI settings to use agyline");
     println!(
-        "    --agy-setup-force         Configure Antigravity CLI settings to use agyline (overwrite existing)"
+        "    --setup-force             Configure Antigravity CLI settings to use agyline (overwrite existing)"
     );
-    println!("    --agy-unsetup             Remove agyline from Antigravity CLI settings");
+    println!("    --unsetup                 Remove agyline from Antigravity CLI settings");
     println!();
     println!("ENVIRONMENT:");
     println!("    AGYLINE_CONFIG_DIR        Override the agyline config directory");
@@ -81,9 +81,9 @@ fn main() {
             .expect("config directory override was already set");
     }
 
-    // Handle --agy-setup / --agy-setup-force
-    let setup_force = args.iter().any(|a| a == "--agy-setup-force");
-    let setup = args.iter().any(|a| a == "--agy-setup") || setup_force;
+    // Handle --setup / --setup-force
+    let setup_force = args.iter().any(|a| a == "--setup-force");
+    let setup = args.iter().any(|a| a == "--setup") || setup_force;
     if setup {
         let settings_path = agyline::config::manager::agy_settings_path();
         match agyline::config::manager::setup_agy_statusline(&settings_path, setup_force) {
@@ -102,7 +102,7 @@ fn main() {
                 existing_command,
             }) => {
                 eprintln!(
-                    "agyline: statusLine is already configured with \"{}\" in {}. Use --agy-setup-force to overwrite.",
+                    "agyline: statusLine is already configured with \"{}\" in {}. Use --setup-force to overwrite.",
                     existing_command,
                     path.display()
                 );
@@ -116,8 +116,8 @@ fn main() {
         return;
     }
 
-    // Handle --agy-unsetup
-    if args.iter().any(|a| a == "--agy-unsetup") {
+    // Handle --unsetup
+    if args.iter().any(|a| a == "--unsetup") {
         let settings_path = agyline::config::manager::agy_settings_path();
         match agyline::config::manager::unsetup_agy_statusline(&settings_path) {
             Ok(agyline::config::manager::AgyUnsetupResult::Removed { path }) => {
