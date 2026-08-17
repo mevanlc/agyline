@@ -15,6 +15,11 @@ fn print_help() {
     println!("    -V, --version             Print version");
     println!("    --config-dir <path>       Use a different agyline config directory");
     println!("    --install-themes          Install/reinstall default themes");
+    println!("    --agy-setup               Configure Antigravity CLI settings to use agyline");
+    println!(
+        "    --agy-setup-force         Configure Antigravity CLI settings to use agyline (overwrite existing)"
+    );
+    println!("    --agy-unsetup             Remove agyline from Antigravity CLI settings");
     println!();
     println!("ENVIRONMENT:");
     println!("    AGYLINE_CONFIG_DIR        Override the agyline config directory");
@@ -74,6 +79,73 @@ fn main() {
     if let Some(path) = config_dir {
         agyline::config::manager::set_config_dir_override(path)
             .expect("config directory override was already set");
+    }
+
+    // Handle --agy-setup / --agy-setup-force
+    let setup_force = args.iter().any(|a| a == "--agy-setup-force");
+    let setup = args.iter().any(|a| a == "--agy-setup") || setup_force;
+    if setup {
+        let settings_path = agyline::config::manager::agy_settings_path();
+        match agyline::config::manager::setup_agy_statusline(&settings_path, setup_force) {
+            Ok(agyline::config::manager::AgySetupResult::Configured { path, already_set }) => {
+                if already_set {
+                    eprintln!(
+                        "agyline: statusLine is already configured with agyline in {}",
+                        path.display()
+                    );
+                } else {
+                    eprintln!("agyline: configured statusLine in {}", path.display());
+                }
+            }
+            Ok(agyline::config::manager::AgySetupResult::Conflict {
+                path,
+                existing_command,
+            }) => {
+                eprintln!(
+                    "agyline: statusLine is already configured with \"{}\" in {}. Use --agy-setup-force to overwrite.",
+                    existing_command,
+                    path.display()
+                );
+                std::process::exit(1);
+            }
+            Err(e) => {
+                eprintln!("agyline: setup error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
+    // Handle --agy-unsetup
+    if args.iter().any(|a| a == "--agy-unsetup") {
+        let settings_path = agyline::config::manager::agy_settings_path();
+        match agyline::config::manager::unsetup_agy_statusline(&settings_path) {
+            Ok(agyline::config::manager::AgyUnsetupResult::Removed { path }) => {
+                eprintln!("agyline: removed statusLine from {}", path.display());
+            }
+            Ok(agyline::config::manager::AgyUnsetupResult::NotConfigured { path }) => {
+                eprintln!(
+                    "agyline: statusLine is not configured in {}",
+                    path.display()
+                );
+            }
+            Ok(agyline::config::manager::AgyUnsetupResult::DifferentCommand {
+                path,
+                existing_command,
+            }) => {
+                eprintln!(
+                    "agyline: statusLine is configured to \"{}\" in {}, not \"agyline\".",
+                    existing_command,
+                    path.display()
+                );
+                std::process::exit(1);
+            }
+            Err(e) => {
+                eprintln!("agyline: unsetup error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        return;
     }
 
     // Handle --install-themes

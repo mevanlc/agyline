@@ -24,19 +24,29 @@ Run `agyline` in a terminal to launch the interactive theme editor:
 agyline
 ```
 
-### Configure in Google Antigravity CLI
-Create a statusline helper script, e.g. `~/.gemini/antigravity-cli/statusline.sh`:
+### Automatic Setup with Google Antigravity CLI
+Quickly configure Antigravity CLI to use `agyline`:
 ```bash
-#!/usr/bin/env bash
-# Read Antigravity CLI JSON from stdin and pipe to agyline
-exec agyline
-```
-Make it executable:
-```bash
-chmod +x ~/.gemini/antigravity-cli/statusline.sh
+# Configure statusLine in ~/.gemini/antigravity-cli/settings.json
+agyline --agy-setup
+
+# Overwrite if a different statusLine command is already configured
+agyline --agy-setup-force
+
+# Remove agyline from settings.json
+agyline --agy-unsetup
 ```
 
-Then configure the statusline command in Antigravity or invoke `agyline` directly with JSON on stdin.
+### Manual Configuration
+You can also manually edit `~/.gemini/antigravity-cli/settings.json`:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "agyline"
+  }
+}
+```
 
 ## Config Directory
 By default, `agyline` stores its configuration in `~/.gemini/antigravity-cli/agyline` (with fallback to `XLINE_CONFIG_DIR`). Override the config directory with `--config-dir`:
