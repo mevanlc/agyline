@@ -2,28 +2,24 @@ use ratatui::{
     Frame,
     layout::{Constraint, Flex, Layout, Rect},
     style::{Color, Style},
-    text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear},
 };
+use ratatui_textarea::TextArea;
 
-pub fn render(f: &mut Frame, area: Rect, title: &str, buffer: &str) {
-    let popup = centered_rect(40, 4, area);
+pub fn render(f: &mut Frame, area: Rect, title: &str, textarea: &TextArea<'_>) {
+    let popup = centered_rect(40, 3, area);
     f.render_widget(Clear, popup);
 
+    let mut textarea = textarea.clone();
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Blue))
         .title(format!(" {} ", title));
 
-    let cursor = "\u{2588}"; // █
-    let text = Line::from(vec![
-        Span::styled(buffer, Style::default().fg(Color::White)),
-        Span::styled(cursor, Style::default().fg(Color::Blue)),
-    ]);
-
-    let paragraph = Paragraph::new(text).block(block);
-    f.render_widget(paragraph, popup);
+    textarea.set_block(block);
+    textarea.set_cursor_line_style(Style::default());
+    f.render_widget(&textarea, popup);
 }
 
 fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {

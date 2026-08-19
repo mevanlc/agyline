@@ -11,7 +11,8 @@ use crate::config::types::{
 use crate::core::ring_cursor::RingCursor;
 use crate::data::icon_catalog::{IconCatalogData, IconPickerTab};
 use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::Frame;
+use ratatui::{Frame, style::Style};
+use ratatui_textarea::{CursorMove, TextArea};
 use std::path::PathBuf;
 
 use super::widgets::{
@@ -57,8 +58,9 @@ pub struct App {
     pub open_menu_selection: usize,
     pub open_menu_themes: Vec<(String, PathBuf)>,
     pub name_input_open: bool,
-    pub name_input_buffer: String,
+    pub name_input_textarea: TextArea<'static>,
     pub name_input_purpose: NameInputPurpose,
+    pub pending_open_theme: Option<(String, PathBuf)>,
     pub confirm_dialog_open: bool,
     pub confirm_dialog_message: String,
     pub confirm_dialog_action: ConfirmAction,
@@ -113,9 +115,7 @@ pub struct ColorPickerState {
     pub mode: RingCursor<ColorPickerMode>,
     pub c16_selection: u8,
     pub c256_selection: u8,
-    pub rgb_r: String,
-    pub rgb_g: String,
-    pub rgb_b: String,
+    pub rgb_textareas: [TextArea<'static>; 3],
     pub rgb_focus: usize, // 0=R, 1=G, 2=B
 }
 
@@ -126,8 +126,77 @@ pub enum ColorPickerMode {
     Rgb,
 }
 
+impl ColorPickerState {
+    pub fn r_val(&self) -> u8 {
+        self.rgb_textareas[0]
+            .lines()
+            .first()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(128)
+    }
+
+    pub fn g_val(&self) -> u8 {
+        self.rgb_textareas[1]
+            .lines()
+            .first()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(128)
+    }
+
+    pub fn b_val(&self) -> u8 {
+        self.rgb_textareas[2]
+            .lines()
+            .first()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(128)
+    }
+
+    pub fn r_str(&self) -> &str {
+        self.rgb_textareas[0]
+            .lines()
+            .first()
+            .map(|s| s.as_str())
+            .unwrap_or("")
+    }
+
+    pub fn g_str(&self) -> &str {
+        self.rgb_textareas[1]
+            .lines()
+            .first()
+            .map(|s| s.as_str())
+            .unwrap_or("")
+    }
+
+    pub fn b_str(&self) -> &str {
+        self.rgb_textareas[2]
+            .lines()
+            .first()
+            .map(|s| s.as_str())
+            .unwrap_or("")
+    }
+
+    pub fn set_rgb(&mut self, r: u8, g: u8, b: u8) {
+        for (i, val) in [r, g, b].iter().enumerate() {
+            let mut ta = TextArea::new(vec![val.to_string()]);
+            ta.move_cursor(CursorMove::End);
+            ta.set_cursor_line_style(Style::default());
+            self.rgb_textareas[i] = ta;
+        }
+    }
+}
+
 impl Default for ColorPickerState {
     fn default() -> Self {
+        let mut r = TextArea::new(vec!["128".into()]);
+        r.move_cursor(CursorMove::End);
+        r.set_cursor_line_style(Style::default());
+        let mut g = TextArea::new(vec!["128".into()]);
+        g.move_cursor(CursorMove::End);
+        g.set_cursor_line_style(Style::default());
+        let mut b = TextArea::new(vec!["128".into()]);
+        b.move_cursor(CursorMove::End);
+        b.set_cursor_line_style(Style::default());
+
         Self {
             mode: RingCursor::new(vec![
                 ColorPickerMode::Color16,
@@ -136,9 +205,7 @@ impl Default for ColorPickerState {
             ]),
             c16_selection: 0,
             c256_selection: 0,
-            rgb_r: "128".into(),
-            rgb_g: "128".into(),
-            rgb_b: "128".into(),
+            rgb_textareas: [r, g, b],
             rgb_focus: 0,
         }
     }
@@ -164,16 +231,51 @@ pub enum IconPickerPurpose {
 pub struct IconPickerState {
     pub tab: RingCursor<IconPickerTab>,
     pub purpose: IconPickerPurpose,
-    pub search_query: String,
-    pub search_cursor: usize,
+    pub search_textarea: TextArea<'static>,
     pub selected_index: usize,
     pub scroll_offset: usize,
-    pub custom_buffer: String,
-    pub custom_cursor: usize,
+    pub custom_textarea: TextArea<'static>,
+}
+
+impl IconPickerState {
+    pub fn search_query(&self) -> &str {
+        self.search_textarea
+            .lines()
+            .first()
+            .map(|s| s.as_str())
+            .unwrap_or("")
+    }
+
+    pub fn custom_buffer(&self) -> &str {
+        self.custom_textarea
+            .lines()
+            .first()
+            .map(|s| s.as_str())
+            .unwrap_or("")
+    }
+
+    pub fn set_search_query(&mut self, query: &str) {
+        let mut ta = TextArea::new(vec![query.to_string()]);
+        ta.move_cursor(CursorMove::End);
+        ta.set_cursor_line_style(Style::default());
+        self.search_textarea = ta;
+    }
+
+    pub fn set_custom_buffer(&mut self, text: &str) {
+        let mut ta = TextArea::new(vec![text.to_string()]);
+        ta.move_cursor(CursorMove::End);
+        ta.set_cursor_line_style(Style::default());
+        self.custom_textarea = ta;
+    }
 }
 
 impl Default for IconPickerState {
     fn default() -> Self {
+        let mut search_ta = TextArea::default();
+        search_ta.set_cursor_line_style(Style::default());
+        let mut custom_ta = TextArea::default();
+        custom_ta.set_cursor_line_style(Style::default());
+
         Self {
             tab: RingCursor::new(vec![
                 IconPickerTab::Emoji,
@@ -182,12 +284,10 @@ impl Default for IconPickerState {
                 IconPickerTab::Custom,
             ]),
             purpose: IconPickerPurpose::PlainIcon,
-            search_query: String::new(),
-            search_cursor: 0,
+            search_textarea: search_ta,
             selected_index: 0,
             scroll_offset: 0,
-            custom_buffer: String::new(),
-            custom_cursor: 0,
+            custom_textarea: custom_ta,
         }
     }
 }
@@ -235,6 +335,9 @@ impl App {
             })
         };
 
+        let mut name_input_ta = TextArea::default();
+        name_input_ta.set_cursor_line_style(Style::default());
+
         Self {
             theme,
             theme_name: name,
@@ -258,8 +361,9 @@ impl App {
             open_menu_selection: 0,
             open_menu_themes: Vec::new(),
             name_input_open: false,
-            name_input_buffer: String::new(),
+            name_input_textarea: name_input_ta,
             name_input_purpose: NameInputPurpose::SaveAs,
+            pending_open_theme: None,
             confirm_dialog_open: false,
             confirm_dialog_message: String::new(),
             confirm_dialog_action: ConfirmAction::ExitWithoutSaving,
@@ -269,6 +373,30 @@ impl App {
             icon_picker: IconPickerState::default(),
             icon_catalog: IconCatalogData::load(),
         }
+    }
+
+    pub fn name_input_buffer(&self) -> String {
+        self.name_input_textarea
+            .lines()
+            .first()
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    pub fn set_name_input_buffer(&mut self, s: &str) {
+        let mut ta = TextArea::new(vec![s.to_string()]);
+        ta.move_cursor(CursorMove::End);
+        ta.set_cursor_line_style(Style::default());
+        self.name_input_textarea = ta;
+    }
+
+    pub fn open_name_input(&mut self, purpose: NameInputPurpose, initial: &str) {
+        let mut ta = TextArea::new(vec![initial.to_string()]);
+        ta.move_cursor(CursorMove::End);
+        ta.set_cursor_line_style(Style::default());
+        self.name_input_textarea = ta;
+        self.name_input_purpose = purpose;
+        self.name_input_open = true;
     }
 
     pub fn mark_dirty(&mut self) {
@@ -315,7 +443,7 @@ impl App {
             return;
         }
         if self.name_input_open {
-            self.handle_name_input(code, is_cancel);
+            self.handle_name_input_with_modifiers(code, modifiers, is_cancel);
             return;
         }
         if self.color_picker_open {
@@ -323,7 +451,7 @@ impl App {
             return;
         }
         if self.icon_picker_open {
-            self.handle_icon_picker(code, is_cancel);
+            self.handle_icon_picker_with_modifiers(code, modifiers, is_cancel);
             return;
         }
         if self.import_colors_open {
@@ -502,9 +630,7 @@ impl App {
                                 .and_then(|value| value.as_str())
                                 .unwrap_or(DEFAULT_HOSTNAME_RSTRIP)
                                 .to_owned();
-                            self.name_input_open = true;
-                            self.name_input_buffer = value;
-                            self.name_input_purpose = NameInputPurpose::HostnameRstrip;
+                            self.open_name_input(NameInputPurpose::HostnameRstrip, &value);
                         }
                         FieldSelection::WorktreeOutside => {
                             let comp = &mut self.theme.components[self.selected_component];
@@ -660,9 +786,7 @@ impl App {
                                 .and_then(|value| value.as_str())
                                 .unwrap_or_default()
                                 .to_owned();
-                            self.name_input_open = true;
-                            self.name_input_buffer = value;
-                            self.name_input_purpose = NameInputPurpose::ModelSearch;
+                            self.open_name_input(NameInputPurpose::ModelSearch, &value);
                         }
                         FieldSelection::ModelReplace => {
                             let value = self.theme.components[self.selected_component]
@@ -671,9 +795,7 @@ impl App {
                                 .and_then(|value| value.as_str())
                                 .unwrap_or_default()
                                 .to_owned();
-                            self.name_input_open = true;
-                            self.name_input_buffer = value;
-                            self.name_input_purpose = NameInputPurpose::ModelReplace;
+                            self.open_name_input(NameInputPurpose::ModelReplace, &value);
                         }
                         FieldSelection::FlashIcon => {
                             self.open_icon_picker(IconPickerPurpose::FlashIcon);
@@ -838,9 +960,7 @@ impl App {
     }
 
     fn action_save_as(&mut self) {
-        self.name_input_open = true;
-        self.name_input_buffer.clear();
-        self.name_input_purpose = NameInputPurpose::SaveAs;
+        self.open_name_input(NameInputPurpose::SaveAs, "");
     }
 
     fn action_open(&mut self) {
@@ -859,9 +979,8 @@ impl App {
     }
 
     fn action_rename(&mut self) {
-        self.name_input_open = true;
-        self.name_input_buffer = self.theme_name.clone();
-        self.name_input_purpose = NameInputPurpose::Rename;
+        let name = self.theme_name.clone();
+        self.open_name_input(NameInputPurpose::Rename, &name);
     }
 
     fn action_delete(&mut self) {
@@ -889,7 +1008,16 @@ impl App {
 
     // --- Name input ---
 
-    fn handle_name_input(&mut self, code: KeyCode, is_cancel: bool) {
+    pub fn handle_name_input(&mut self, code: KeyCode, is_cancel: bool) {
+        self.handle_name_input_with_modifiers(code, KeyModifiers::NONE, is_cancel);
+    }
+
+    pub fn handle_name_input_with_modifiers(
+        &mut self,
+        code: KeyCode,
+        modifiers: KeyModifiers,
+        is_cancel: bool,
+    ) {
         if is_cancel {
             self.name_input_open = false;
             return;
@@ -897,9 +1025,16 @@ impl App {
         match code {
             KeyCode::Enter => {
                 self.name_input_open = false;
+                let text = self
+                    .name_input_textarea
+                    .lines()
+                    .first()
+                    .map(|s| s.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 match self.name_input_purpose {
                     NameInputPurpose::SaveAs | NameInputPurpose::Rename => {
-                        let name = self.name_input_buffer.trim().to_string();
+                        let name = text.trim().to_string();
                         if name.is_empty() || !manager::is_valid_theme_name(&name) {
                             self.status_message = Some("Invalid theme name".into());
                             return;
@@ -911,7 +1046,7 @@ impl App {
                         }
                     }
                     NameInputPurpose::HostnameRstrip => {
-                        let value = self.name_input_buffer.trim().to_owned();
+                        let value = text.trim().to_owned();
                         if let Some(comp) = self.theme.components.get_mut(self.selected_component) {
                             comp.options
                                 .insert("rstrip".into(), serde_json::Value::String(value));
@@ -920,7 +1055,7 @@ impl App {
                         }
                     }
                     NameInputPurpose::ModelSearch => {
-                        let value = self.name_input_buffer.to_owned();
+                        let value = text;
                         if let Some(comp) = self.theme.components.get_mut(self.selected_component) {
                             comp.options.insert(
                                 MODEL_OPTION_SEARCH.into(),
@@ -931,7 +1066,7 @@ impl App {
                         }
                     }
                     NameInputPurpose::ModelReplace => {
-                        let value = self.name_input_buffer.to_owned();
+                        let value = text;
                         if let Some(comp) = self.theme.components.get_mut(self.selected_component) {
                             comp.options.insert(
                                 MODEL_OPTION_REPLACE.into(),
@@ -943,11 +1078,10 @@ impl App {
                     }
                 }
             }
-            KeyCode::Char(c) => self.name_input_buffer.push(c),
-            KeyCode::Backspace => {
-                self.name_input_buffer.pop();
+            _ => {
+                let key_event = crossterm::event::KeyEvent::new(code, modifiers);
+                self.name_input_textarea.input(key_event);
             }
-            _ => {}
         }
     }
 
@@ -1028,11 +1162,8 @@ impl App {
                     self.should_quit = true;
                 }
                 ConfirmAction::DiscardAndOpen => {
-                    // name_input_buffer holds "name\0path" stashed by handle_open_menu
-                    let stash = self.name_input_buffer.clone();
-                    if let Some((name, path_str)) = stash.split_once('\0') {
-                        let path = PathBuf::from(path_str);
-                        self.do_open_theme(name, &path);
+                    if let Some((name, path)) = self.pending_open_theme.take() {
+                        self.do_open_theme(&name, &path);
                     }
                 }
                 ConfirmAction::ReinstallDefaults => {
@@ -1203,8 +1334,7 @@ impl App {
                         self.confirm_dialog_open = true;
                         self.confirm_dialog_message = format!("Discard changes and open {}?", name);
                         self.confirm_dialog_action = ConfirmAction::DiscardAndOpen;
-                        // Stash the target in name_input_buffer temporarily
-                        self.name_input_buffer = format!("{}\0{}", name, path.display());
+                        self.pending_open_theme = Some((name, path));
                     } else {
                         self.do_open_theme(&name, &path);
                     }
@@ -1278,12 +1408,8 @@ impl App {
                     state
                 }
                 Some(AnsiColor::Rgb { r, g, b }) => {
-                    let mut state = ColorPickerState {
-                        rgb_r: r.to_string(),
-                        rgb_g: g.to_string(),
-                        rgb_b: b.to_string(),
-                        ..Default::default()
-                    };
+                    let mut state = ColorPickerState::default();
+                    state.set_rgb(*r, *g, *b);
                     state.mode.set(&ColorPickerMode::Rgb);
                     state
                 }
@@ -1293,7 +1419,7 @@ impl App {
         self.color_picker_open = true;
     }
 
-    fn handle_color_picker(&mut self, code: KeyCode, _modifiers: KeyModifiers, is_cancel: bool) {
+    fn handle_color_picker(&mut self, code: KeyCode, modifiers: KeyModifiers, is_cancel: bool) {
         if is_cancel {
             self.color_picker_open = false;
             return;
@@ -1349,7 +1475,10 @@ impl App {
                     self.color_picker.c256_selection =
                         self.color_picker.c256_selection.saturating_sub(16);
                 }
-                _ => {}
+                ColorPickerMode::Rgb => {
+                    let ta = &mut self.color_picker.rgb_textareas[self.color_picker.rgb_focus];
+                    ta.input(crossterm::event::KeyEvent::new(code, modifiers));
+                }
             },
             KeyCode::Right => match *self.color_picker.mode.current() {
                 ColorPickerMode::Color16 => {
@@ -1361,27 +1490,30 @@ impl App {
                     self.color_picker.c256_selection =
                         self.color_picker.c256_selection.saturating_add(16);
                 }
-                _ => {}
+                ColorPickerMode::Rgb => {
+                    let ta = &mut self.color_picker.rgb_textareas[self.color_picker.rgb_focus];
+                    ta.input(crossterm::event::KeyEvent::new(code, modifiers));
+                }
             },
             KeyCode::Char(c)
                 if c.is_ascii_digit() && self.color_picker.mode == ColorPickerMode::Rgb =>
             {
-                let field = match self.color_picker.rgb_focus {
-                    0 => &mut self.color_picker.rgb_r,
-                    1 => &mut self.color_picker.rgb_g,
-                    _ => &mut self.color_picker.rgb_b,
-                };
-                if field.len() < 3 {
-                    field.push(c);
+                let ta = &mut self.color_picker.rgb_textareas[self.color_picker.rgb_focus];
+                let current_len = ta.lines().first().map(|s| s.len()).unwrap_or(0);
+                if current_len < 3 {
+                    ta.input(crossterm::event::KeyEvent::new(KeyCode::Char(c), modifiers));
                 }
             }
             KeyCode::Backspace if self.color_picker.mode == ColorPickerMode::Rgb => {
-                let field = match self.color_picker.rgb_focus {
-                    0 => &mut self.color_picker.rgb_r,
-                    1 => &mut self.color_picker.rgb_g,
-                    _ => &mut self.color_picker.rgb_b,
-                };
-                field.pop();
+                let ta = &mut self.color_picker.rgb_textareas[self.color_picker.rgb_focus];
+                ta.input(crossterm::event::KeyEvent::new(
+                    KeyCode::Backspace,
+                    modifiers,
+                ));
+            }
+            KeyCode::Delete if self.color_picker.mode == ColorPickerMode::Rgb => {
+                let ta = &mut self.color_picker.rgb_textareas[self.color_picker.rgb_focus];
+                ta.input(crossterm::event::KeyEvent::new(KeyCode::Delete, modifiers));
             }
             KeyCode::Char('x') | KeyCode::Char('X') => {
                 // Remove color (set to None)
@@ -1406,9 +1538,9 @@ impl App {
                         c256: self.color_picker.c256_selection,
                     },
                     ColorPickerMode::Rgb => {
-                        let r = self.color_picker.rgb_r.parse().unwrap_or(128);
-                        let g = self.color_picker.rgb_g.parse().unwrap_or(128);
-                        let b = self.color_picker.rgb_b.parse().unwrap_or(128);
+                        let r = self.color_picker.r_val();
+                        let g = self.color_picker.g_val();
+                        let b = self.color_picker.b_val();
                         AnsiColor::Rgb { r, g, b }
                     }
                 };
@@ -1514,7 +1646,13 @@ impl App {
             String::new()
         };
 
-        let custom_cursor = current.chars().count();
+        let mut search_ta = TextArea::default();
+        search_ta.set_cursor_line_style(Style::default());
+
+        let mut custom_ta = TextArea::new(vec![current]);
+        custom_ta.move_cursor(CursorMove::End);
+        custom_ta.set_cursor_line_style(Style::default());
+
         self.icon_picker = IconPickerState {
             tab: RingCursor::new(vec![
                 IconPickerTab::Emoji,
@@ -1523,18 +1661,25 @@ impl App {
                 IconPickerTab::Custom,
             ]),
             purpose,
-            search_query: String::new(),
-            search_cursor: 0,
+            search_textarea: search_ta,
             selected_index: 0,
             scroll_offset: 0,
-            custom_buffer: current,
-            custom_cursor,
+            custom_textarea: custom_ta,
         };
         self.icon_picker.tab.set(&initial_tab);
         self.icon_picker_open = true;
     }
 
-    fn handle_icon_picker(&mut self, code: KeyCode, is_cancel: bool) {
+    pub fn handle_icon_picker(&mut self, code: KeyCode, is_cancel: bool) {
+        self.handle_icon_picker_with_modifiers(code, KeyModifiers::NONE, is_cancel);
+    }
+
+    pub fn handle_icon_picker_with_modifiers(
+        &mut self,
+        code: KeyCode,
+        modifiers: KeyModifiers,
+        is_cancel: bool,
+    ) {
         if is_cancel {
             self.icon_picker_open = false;
             return;
@@ -1552,28 +1697,6 @@ impl App {
                 self.icon_picker.tab.move_prev();
                 self.icon_picker.selected_index = 0;
                 self.icon_picker.scroll_offset = 0;
-            }
-            KeyCode::Left => {
-                if is_custom {
-                    self.icon_picker.custom_cursor =
-                        self.icon_picker.custom_cursor.saturating_sub(1);
-                } else {
-                    self.icon_picker.search_cursor =
-                        self.icon_picker.search_cursor.saturating_sub(1);
-                }
-            }
-            KeyCode::Right => {
-                if is_custom {
-                    let len = self.icon_picker.custom_buffer.chars().count();
-                    if self.icon_picker.custom_cursor < len {
-                        self.icon_picker.custom_cursor += 1;
-                    }
-                } else {
-                    let len = self.icon_picker.search_query.chars().count();
-                    if self.icon_picker.search_cursor < len {
-                        self.icon_picker.search_cursor += 1;
-                    }
-                }
             }
             KeyCode::Up if !is_custom => {
                 if self.icon_picker.selected_index > 0 {
@@ -1617,59 +1740,19 @@ impl App {
             KeyCode::Enter => {
                 self.apply_icon_picker_selection();
             }
-            KeyCode::Char(c) => {
+            _ => {
+                let key_event = crossterm::event::KeyEvent::new(code, modifiers);
                 if is_custom {
-                    let byte_pos = self
-                        .icon_picker
-                        .custom_buffer
-                        .char_indices()
-                        .nth(self.icon_picker.custom_cursor)
-                        .map(|(i, _)| i)
-                        .unwrap_or(self.icon_picker.custom_buffer.len());
-                    self.icon_picker.custom_buffer.insert(byte_pos, c);
-                    self.icon_picker.custom_cursor += 1;
+                    self.icon_picker.custom_textarea.input(key_event);
                 } else {
-                    let byte_pos = self
-                        .icon_picker
-                        .search_query
-                        .char_indices()
-                        .nth(self.icon_picker.search_cursor)
-                        .map(|(i, _)| i)
-                        .unwrap_or(self.icon_picker.search_query.len());
-                    self.icon_picker.search_query.insert(byte_pos, c);
-                    self.icon_picker.search_cursor += 1;
-                    self.icon_picker.selected_index = 0;
-                    self.icon_picker.scroll_offset = 0;
-                }
-            }
-            KeyCode::Backspace => {
-                if is_custom {
-                    if self.icon_picker.custom_cursor > 0 {
-                        let byte_pos = self
-                            .icon_picker
-                            .custom_buffer
-                            .char_indices()
-                            .nth(self.icon_picker.custom_cursor - 1)
-                            .map(|(i, _)| i)
-                            .unwrap_or(0);
-                        self.icon_picker.custom_buffer.remove(byte_pos);
-                        self.icon_picker.custom_cursor -= 1;
+                    let before = self.icon_picker.search_query().to_string();
+                    self.icon_picker.search_textarea.input(key_event);
+                    if self.icon_picker.search_query() != before {
+                        self.icon_picker.selected_index = 0;
+                        self.icon_picker.scroll_offset = 0;
                     }
-                } else if self.icon_picker.search_cursor > 0 {
-                    let byte_pos = self
-                        .icon_picker
-                        .search_query
-                        .char_indices()
-                        .nth(self.icon_picker.search_cursor - 1)
-                        .map(|(i, _)| i)
-                        .unwrap_or(0);
-                    self.icon_picker.search_query.remove(byte_pos);
-                    self.icon_picker.search_cursor -= 1;
-                    self.icon_picker.selected_index = 0;
-                    self.icon_picker.scroll_offset = 0;
                 }
             }
-            _ => {}
         }
     }
 
@@ -1677,7 +1760,7 @@ impl App {
         let tab = *self.icon_picker.tab.current();
         let sections = self
             .icon_catalog
-            .sections(tab, &self.icon_picker.search_query);
+            .sections(tab, self.icon_picker.search_query());
         super::widgets::icon_picker::selectable_count(&sections)
     }
 
@@ -1691,7 +1774,7 @@ impl App {
         let tab = *self.icon_picker.tab.current();
         let sections = self
             .icon_catalog
-            .sections(tab, &self.icon_picker.search_query);
+            .sections(tab, self.icon_picker.search_query());
 
         let Some(flat_idx) = super::widgets::icon_picker::selectable_to_flat(
             &sections,
@@ -1711,12 +1794,12 @@ impl App {
         let is_custom = *self.icon_picker.tab.current() == IconPickerTab::Custom;
 
         let icon_str = if is_custom {
-            self.icon_picker.custom_buffer.clone()
+            self.icon_picker.custom_buffer().to_string()
         } else {
             let tab = *self.icon_picker.tab.current();
             let sections = self
                 .icon_catalog
-                .sections(tab, &self.icon_picker.search_query);
+                .sections(tab, self.icon_picker.search_query());
 
             match super::widgets::icon_picker::entry_at_selectable(
                 &sections,
@@ -1919,7 +2002,7 @@ impl App {
                 NameInputPurpose::ModelSearch => "Search Regex",
                 NameInputPurpose::ModelReplace => "Replacement",
             };
-            super::widgets::name_input::render(f, f.area(), title, &self.name_input_buffer);
+            super::widgets::name_input::render(f, f.area(), title, &self.name_input_textarea);
         }
         if self.confirm_dialog_open {
             super::widgets::confirm_dialog::render(
@@ -2224,7 +2307,7 @@ mod tests {
         app.icon_picker
             .tab
             .set(&crate::data::icon_catalog::IconPickerTab::Custom);
-        app.icon_picker.custom_buffer = "🦑".into();
+        app.icon_picker.set_custom_buffer("🦑");
         app.apply_icon_picker_selection();
 
         let model = &app.theme.components[app.selected_component];
@@ -2238,12 +2321,135 @@ mod tests {
         app.icon_picker
             .tab
             .set(&crate::data::icon_catalog::IconPickerTab::Custom);
-        app.icon_picker.custom_buffer = "🦅".into();
+        app.icon_picker.set_custom_buffer("🦅");
         app.apply_icon_picker_selection();
 
         let model = &app.theme.components[app.selected_component];
         let pm = model.icon.per_model.as_ref().unwrap();
         assert_eq!(pm.opus.plain, "🦑");
         assert_eq!(pm.opus.nerd_font, "🦅");
+    }
+
+    #[test]
+    fn name_input_textarea_editing_and_submission() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+
+        app.open_name_input(NameInputPurpose::HostnameRstrip, ".local");
+        assert_eq!(app.name_input_buffer(), ".local");
+
+        // Type additional suffix
+        for c in ",.internal".chars() {
+            app.handle_key(KeyCode::Char(c), crossterm::event::KeyModifiers::NONE);
+        }
+        assert_eq!(app.name_input_buffer(), ".local,.internal");
+
+        // Press Backspace
+        app.handle_key(KeyCode::Backspace, crossterm::event::KeyModifiers::NONE);
+        assert_eq!(app.name_input_buffer(), ".local,.interna");
+
+        // Submit with Enter
+        app.selected_component = app
+            .theme
+            .components
+            .iter()
+            .position(|c| c.id == ComponentId::Hostname)
+            .unwrap();
+        app.name_input_purpose = NameInputPurpose::HostnameRstrip;
+        app.handle_key(KeyCode::Enter, crossterm::event::KeyModifiers::NONE);
+        assert!(!app.name_input_open);
+
+        let rstrip = app.theme.components[app.selected_component]
+            .options
+            .get("rstrip")
+            .and_then(|v| v.as_str());
+        assert_eq!(rstrip, Some(".local,.interna"));
+    }
+
+    #[test]
+    fn icon_picker_search_and_custom_textareas() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+
+        app.open_icon_picker(crate::tui::app::IconPickerPurpose::PlainIcon);
+        assert!(app.icon_picker_open);
+
+        // Search textarea input
+        for c in "rocket".chars() {
+            app.handle_key(KeyCode::Char(c), crossterm::event::KeyModifiers::NONE);
+        }
+        assert_eq!(app.icon_picker.search_query(), "rocket");
+
+        // Switch to custom tab
+        app.icon_picker
+            .tab
+            .set(&crate::data::icon_catalog::IconPickerTab::Custom);
+        app.icon_picker.set_custom_buffer("");
+
+        for c in "🚀✨".chars() {
+            app.handle_key(KeyCode::Char(c), crossterm::event::KeyModifiers::NONE);
+        }
+        assert_eq!(app.icon_picker.custom_buffer(), "🚀✨");
+
+        // Apply custom icon
+        app.handle_key(KeyCode::Enter, crossterm::event::KeyModifiers::NONE);
+        assert_eq!(app.theme.components[0].icon.plain, "🚀✨");
+    }
+
+    #[test]
+    fn color_picker_rgb_textareas_editing() {
+        let mut app = App::new(
+            "Test".into(),
+            "/tmp/Test.toml".into(),
+            UserTheme::default_theme(),
+        );
+
+        app.selected_component = 0;
+        app.selected_field = FieldSelection::TextColor;
+        app.open_color_picker();
+        assert!(app.color_picker_open);
+
+        app.color_picker
+            .mode
+            .set(&crate::tui::app::ColorPickerMode::Rgb);
+        app.color_picker.set_rgb(10, 20, 30);
+        assert_eq!(app.color_picker.r_val(), 10);
+        assert_eq!(app.color_picker.g_val(), 20);
+        assert_eq!(app.color_picker.b_val(), 30);
+
+        // Clear R field and type 255
+        app.color_picker.rgb_focus = 0;
+        app.color_picker.rgb_textareas[0] = ratatui_textarea::TextArea::new(vec![String::new()]);
+        for c in "255".chars() {
+            app.handle_key(KeyCode::Char(c), crossterm::event::KeyModifiers::NONE);
+        }
+        assert_eq!(app.color_picker.r_val(), 255);
+
+        // Move to G field and edit
+        app.handle_key(KeyCode::Down, crossterm::event::KeyModifiers::NONE);
+        assert_eq!(app.color_picker.rgb_focus, 1);
+        app.color_picker.rgb_textareas[1] = ratatui_textarea::TextArea::new(vec![String::new()]);
+        for c in "100".chars() {
+            app.handle_key(KeyCode::Char(c), crossterm::event::KeyModifiers::NONE);
+        }
+        assert_eq!(app.color_picker.g_val(), 100);
+
+        // Submit color
+        app.handle_key(KeyCode::Enter, crossterm::event::KeyModifiers::NONE);
+        assert!(!app.color_picker_open);
+        assert_eq!(
+            app.theme.components[0].colors.text,
+            Some(crate::config::types::AnsiColor::Rgb {
+                r: 255,
+                g: 100,
+                b: 30,
+            })
+        );
     }
 }

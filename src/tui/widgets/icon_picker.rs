@@ -151,59 +151,34 @@ fn render_tabs(f: &mut Frame, area: Rect, state: &IconPickerState) {
 }
 
 fn render_search(f: &mut Frame, area: Rect, state: &IconPickerState) {
-    let text = render_text_with_cursor(&state.search_query, state.search_cursor);
-
+    let mut textarea = state.search_textarea.clone();
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Blue))
         .title(Span::styled(" Search ", Style::default().fg(Color::Yellow)));
 
-    let para = Paragraph::new(text).block(block);
-    f.render_widget(para, area);
+    textarea.set_block(block);
+    textarea.set_cursor_line_style(Style::default());
+    f.render_widget(&textarea, area);
 }
 
 fn render_custom_input(f: &mut Frame, area: Rect, state: &IconPickerState) {
-    let text = render_text_with_cursor(&state.custom_buffer, state.custom_cursor);
-
+    let mut textarea = state.custom_textarea.clone();
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Blue))
         .title(Span::styled(" Input ", Style::default().fg(Color::Yellow)));
 
-    let para = Paragraph::new(text).block(block);
-    f.render_widget(para, area);
-}
-
-/// Render a text field with a block cursor at the given character position.
-fn render_text_with_cursor(text: &str, cursor_pos: usize) -> Line<'static> {
-    let before: String = text.chars().take(cursor_pos).collect();
-    let cursor_char: String = text.chars().nth(cursor_pos).map_or(
-        "\u{2588}".to_string(), // block cursor when at end
-        |c| c.to_string(),
-    );
-    let after: String = text.chars().skip(cursor_pos + 1).collect();
-
-    let cursor_style = if cursor_pos < text.chars().count() {
-        // Cursor is on a character — highlight it
-        Style::default().fg(Color::Black).bg(Color::Blue)
-    } else {
-        // Cursor is at end — show block
-        Style::default().fg(Color::Blue)
-    };
-
-    Line::from(vec![
-        Span::raw(" "),
-        Span::styled(before, Style::default().fg(Color::White)),
-        Span::styled(cursor_char, cursor_style),
-        Span::styled(after, Style::default().fg(Color::White)),
-    ])
+    textarea.set_block(block);
+    textarea.set_cursor_line_style(Style::default());
+    f.render_widget(&textarea, area);
 }
 
 fn render_icon_list(f: &mut Frame, area: Rect, state: &IconPickerState, catalog: &IconCatalogData) {
     let tab = *state.tab.current();
-    let sections = catalog.sections(tab, &state.search_query);
+    let sections = catalog.sections(tab, state.search_query());
 
     let block = Block::default()
         .borders(Borders::ALL)

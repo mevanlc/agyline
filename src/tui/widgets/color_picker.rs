@@ -124,10 +124,14 @@ pub fn render(f: &mut Frame, area: Rect, state: &ColorPickerState) {
         }
         ColorPickerMode::Rgb => {
             let labels = ["R", "G", "B"];
-            let values = [&state.rgb_r, &state.rgb_g, &state.rgb_b];
-            for (i, (label, val)) in labels.iter().zip(values.iter()).enumerate() {
+            for (i, label) in labels.iter().enumerate() {
                 let is_sel = i == state.rgb_focus;
                 let cursor = if is_sel { "> " } else { "  " };
+                let val = match i {
+                    0 => state.r_str(),
+                    1 => state.g_str(),
+                    _ => state.b_str(),
+                };
                 let style = if is_sel {
                     Style::default()
                         .fg(Color::Yellow)
@@ -140,9 +144,9 @@ pub fn render(f: &mut Frame, area: Rect, state: &ColorPickerState) {
                     style,
                 ))));
             }
-            let r: u8 = state.rgb_r.parse().unwrap_or(128);
-            let g: u8 = state.rgb_g.parse().unwrap_or(128);
-            let b: u8 = state.rgb_b.parse().unwrap_or(128);
+            let r = state.r_val();
+            let g = state.g_val();
+            let b = state.b_val();
             items.push(ListItem::new(Line::from(vec![
                 Span::styled("  Preview: ", Style::default().fg(Color::Gray)),
                 Span::styled(
