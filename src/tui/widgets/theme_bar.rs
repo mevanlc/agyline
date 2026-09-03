@@ -6,7 +6,6 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Paragraph},
 };
 use std::path::PathBuf;
-use unicode_width::UnicodeWidthStr;
 
 pub fn render(
     f: &mut Frame,
@@ -26,10 +25,10 @@ pub fn render(
 
     // Build entries with their display widths
     let sep = "  \u{2502}  "; // " │ "
-    let sep_w = UnicodeWidthStr::width(sep);
+    let sep_w = Span::raw(sep).width();
     let arrow_left = " < ";
     let arrow_right = " > ";
-    let arrow_w = UnicodeWidthStr::width(arrow_left);
+    let arrow_w = Span::raw(arrow_left).width();
 
     let entries: Vec<(String, bool)> = themes
         .iter()
@@ -49,7 +48,7 @@ pub fn render(
     let mut end = current_index + 1;
 
     // Width of just the selected entry + arrows
-    let entry_width = |i: usize| UnicodeWidthStr::width(entries[i].0.as_str());
+    let entry_width = |i: usize| Span::raw(&entries[i].0).width();
 
     let mut total_w = arrow_w * 2 + entry_width(current_index);
 

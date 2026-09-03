@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
-use unicode_width::UnicodeWidthStr;
 
 use crate::config::types::{
     AnsiColor, ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH,
@@ -157,7 +156,7 @@ pub fn align_lines(lines: &mut [RenderLine]) {
         for item in &line.items {
             if let RenderItem::Seg(seg) = item {
                 if pos < max_positions {
-                    let w = UnicodeWidthStr::width(seg.icon.as_str());
+                    let w = Span::raw(&seg.icon).width();
                     max_widths[pos] = max_widths[pos].max(w);
                 }
                 pos += 1;
@@ -171,7 +170,7 @@ pub fn align_lines(lines: &mut [RenderLine]) {
         for item in &mut line.items {
             if let RenderItem::Seg(seg) = item {
                 if pos < max_positions {
-                    let w = UnicodeWidthStr::width(seg.icon.as_str());
+                    let w = Span::raw(&seg.icon).width();
                     let pad = max_widths[pos].saturating_sub(w);
                     if pad > 0 {
                         seg.icon.push_str(&" ".repeat(pad));
@@ -203,7 +202,7 @@ pub fn align_lines_refs(lines: &mut [&mut RenderLine]) {
         for item in &line.items {
             if let RenderItem::Seg(seg) = item {
                 if pos < max_positions {
-                    let w = UnicodeWidthStr::width(seg.icon.as_str());
+                    let w = Span::raw(&seg.icon).width();
                     max_widths[pos] = max_widths[pos].max(w);
                 }
                 pos += 1;
@@ -216,7 +215,7 @@ pub fn align_lines_refs(lines: &mut [&mut RenderLine]) {
         for item in &mut line.items {
             if let RenderItem::Seg(seg) = item {
                 if pos < max_positions {
-                    let w = UnicodeWidthStr::width(seg.icon.as_str());
+                    let w = Span::raw(&seg.icon).width();
                     let pad = max_widths[pos].saturating_sub(w);
                     if pad > 0 {
                         seg.icon.push_str(&" ".repeat(pad));
@@ -857,5 +856,21 @@ mod tests {
         let ansi = render_ansi(&line);
 
         assert!(ansi.ends_with("\x1b[0m"));
+    }
+
+    #[test]
+    fn test_ratatui_span_widths() {
+        use ratatui::text::Span;
+        // Emoji with Variation Selector-16 (VS16) counts as 2 columns
+        assert_eq!(Span::raw("\u{1f5a5}\u{fe0f}").width(), 2);
+        // Base character without VS16 counts as 1 column
+        assert_eq!(Span::raw("\u{1f5a5}").width(), 1);
+        // Fullwidth emojis count as 2 columns
+        assert_eq!(Span::raw("\u{1f4bb}").width(), 2);
+        assert_eq!(Span::raw("\u{1f916}").width(), 2);
+        assert_eq!(Span::raw("\u{2699}\u{fe0f}").width(), 2);
+        assert_eq!(Span::raw("\u{26a1}").width(), 2);
+        // Nerd Font single-width glyph counts as 1 column
+        assert_eq!(Span::raw("\u{f108}").width(), 1);
     }
 }
