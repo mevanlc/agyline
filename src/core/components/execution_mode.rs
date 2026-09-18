@@ -14,16 +14,30 @@ impl ExecutionModeComponent {
 
 impl Component for ExecutionModeComponent {
     fn collect(&self, input: &InputData) -> Option<ComponentData> {
-        let mode = input.execution_mode.as_deref()?.trim();
-        if mode.is_empty() {
+        let cycle = input.cycle_mode.as_deref().unwrap_or("").trim();
+        let exec = input.execution_mode.as_deref().unwrap_or("").trim();
+
+        if cycle.is_empty() && exec.is_empty() {
             return None;
         }
 
+        let primary = match (!cycle.is_empty(), !exec.is_empty()) {
+            (true, true) => format!("{} · {}", cycle, exec),
+            (true, false) => cycle.to_string(),
+            (false, true) => exec.to_string(),
+            (false, false) => unreachable!(),
+        };
+
         let mut metadata = HashMap::new();
-        metadata.insert("execution_mode".into(), mode.to_string());
+        if !cycle.is_empty() {
+            metadata.insert("cycle_mode".into(), cycle.to_string());
+        }
+        if !exec.is_empty() {
+            metadata.insert("execution_mode".into(), exec.to_string());
+        }
 
         Some(ComponentData {
-            primary: mode.to_string(),
+            primary,
             secondary: String::new(),
             metadata,
         })

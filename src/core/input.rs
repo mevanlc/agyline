@@ -25,6 +25,7 @@ pub struct InputData {
     pub task_count: Option<u32>,
     pub terminal_width: Option<u32>,
     pub execution_mode: Option<String>,
+    pub cycle_mode: Option<String>,
     pub vim: Option<VimState>,
 }
 
