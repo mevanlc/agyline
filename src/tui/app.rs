@@ -964,14 +964,9 @@ impl App {
         let half = area.width as usize / 2;
         f.render_widget(
             Paragraph::new(format!(
-                "Active:{}  Editing:{}{}",
+                "Active:{}  Editing:{}",
                 self.resource_label(Kind::Theme, active, half.saturating_sub(9)),
-                self.resource_label(Kind::Theme, &self.context, half.saturating_sub(12)),
-                if self.session.dirty(Kind::Theme, &self.context) {
-                    " *"
-                } else {
-                    ""
-                }
+                self.resource_label(Kind::Theme, &self.context, half.saturating_sub(10))
             )),
             geo.context,
         );
@@ -1067,12 +1062,7 @@ impl App {
             widgets::color_picker::render(f, area, &self.editor.color_picker);
         }
         if self.editor.modal == Some(EditorModal::Name) {
-            widgets::name_input::render(
-                f,
-                area,
-                "Edit value — Enter accepts / Esc cancels",
-                &self.editor.name_input_textarea,
-            );
+            widgets::name_input::render(f, area, "Edit value", &self.editor.name_input_textarea);
         }
     }
     fn resource_label(&self, kind: Kind, r: &ResourceRef, width: usize) -> String {

@@ -8,7 +8,11 @@ use ratatui::{
 };
 
 pub fn render(f: &mut Frame, area: Rect, state: &ColorPickerState) {
-    let popup = centered_rect(52, 14, area);
+    let popup = if area.width < 80 || area.height < 22 {
+        area
+    } else {
+        centered_rect(56, 14, area)
+    };
     f.render_widget(Clear, popup);
 
     let mut items: Vec<ListItem> = Vec::new();
@@ -157,13 +161,11 @@ pub fn render(f: &mut Frame, area: Rect, state: &ColorPickerState) {
         }
     }
 
-    items.push(ListItem::new(Line::from("")));
-    items.push(ListItem::new(super::key_hints::render(&[
-        ("Tab", "Mode"),
-        ("Enter", "Apply"),
-        ("X", "Remove"),
-        ("Esc", "Cancel"),
-    ])));
+    items.push(ListItem::new(Line::from(Span::styled(
+        state.error.clone().unwrap_or_default(),
+        Style::default().fg(Color::Red),
+    ))));
+    items.push(ListItem::new("Tab mode  Enter apply  x clear  Esc cancel"));
 
     let block = Block::default()
         .borders(Borders::ALL)

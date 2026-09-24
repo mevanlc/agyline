@@ -33,6 +33,7 @@ pub enum NameInputPurpose {
 
 #[derive(Debug, Clone)]
 pub struct ColorPickerState {
+    pub error: Option<String>,
     pub mode: RingCursor<ColorPickerMode>,
     pub c16_selection: u8,
     pub c256_selection: u8,
@@ -119,6 +120,7 @@ impl Default for ColorPickerState {
         b.set_cursor_line_style(Style::default());
 
         Self {
+            error: None,
             mode: RingCursor::new(vec![
                 ColorPickerMode::Color16,
                 ColorPickerMode::Color256,
@@ -836,6 +838,18 @@ impl EditorState {
                 self.status_message = Some("Color removed".into());
             }
             KeyCode::Enter => {
+                if self.color_picker.mode == ColorPickerMode::Rgb
+                    && self.color_picker.rgb_textareas.iter().any(|ta| {
+                        ta.lines()
+                            .first()
+                            .and_then(|s| s.parse::<u8>().ok())
+                            .is_none()
+                    })
+                {
+                    self.color_picker.error =
+                        Some("RGB values must be integers from 0 to 255".into());
+                    return;
+                }
                 let color = match *self.color_picker.mode.current() {
                     ColorPickerMode::Color16 => AnsiColor::Color16 {
                         c16: self.color_picker.c16_selection,
@@ -1620,5 +1634,24 @@ mod tests {
                 b: 30,
             })
         );
+    }
+}
+
+#[cfg(test)]
+mod validation_tests {
+    use super::*;
+    #[test]
+    fn invalid_rgb_entry_stays_open_without_changing_the_draft() {
+        let mut state = EditorState::new(ResolvedTheme::default_theme());
+        state.selected_field = FieldSelection::IconColor;
+        let before = state.theme.components[0].colors.icon.clone();
+        state.open_color_picker();
+        state.color_picker.mode.set(&ColorPickerMode::Rgb);
+        state.color_picker.rgb_textareas[0] = TextArea::new(vec!["999".into()]);
+        state.handle_key(KeyCode::Enter, KeyModifiers::NONE);
+        assert_eq!(state.modal, Some(EditorModal::Color));
+        assert!(!state.changed);
+        assert_eq!(state.theme.components[0].colors.icon, before);
+        assert!(state.color_picker.error.is_some());
     }
 }

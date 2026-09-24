@@ -7,7 +7,7 @@ use ratatui::{
 use ratatui_textarea::TextArea;
 
 pub fn render(f: &mut Frame, area: Rect, title: &str, textarea: &TextArea<'_>) {
-    let popup = centered_rect(40, 3, area);
+    let popup = centered_rect(area.width.min(72), 5, area);
     f.render_widget(Clear, popup);
 
     let mut textarea = textarea.clone();
@@ -15,7 +15,8 @@ pub fn render(f: &mut Frame, area: Rect, title: &str, textarea: &TextArea<'_>) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Blue))
-        .title(format!(" {} ", title));
+        .title(format!(" {} ", title))
+        .title_bottom(" Enter accept / Esc cancel ");
 
     textarea.set_block(block);
     textarea.set_cursor_line_style(Style::default());

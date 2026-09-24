@@ -1,10 +1,20 @@
 # Plan: named component, icon, and color configs
 
-Status: implementation in progress; visual ownership remains provisionally accepted.
+Status: implemented and verified on 2026-09-24; visual ownership remains provisionally accepted and can be revisited during use.
 
 Replace self-contained theme files with independently named component, icon, and color configs. A named theme associates exactly one of each by name. Users activate a theme; both the statusline renderer and the TUI preview resolve those same associations.
 
 The accepted decisions and implementation defaults below form the refactor baseline. The decision summary at the end distinguishes the provisional visual-ownership choice. Implementation was subsequently authorized, with commits at coherent checkpoints.
+
+Implementation evidence:
+
+- Catalog, store, and session now live in `src/config/{catalog,store,session}.rs`; the runtime `ResolvedTheme` is assembled from named references.
+- The TUI has four sections, persistent drafts, typed dialogs, scoped save reviews, independent glyph/color editors, sharing/dependency actions, and width/height based layouts.
+- `cargo test`: 134 passing tests (123 library, 7 binary, 4 CLI integration). Coverage includes atomic-write failure injection, competing writers, external conflicts, copy/fork dependencies, retained drafts, active-reference renames, read-only rendering, preview/ANSI parity, and responsive viewports.
+- `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`, and `git diff --check` pass.
+- Private tmux sessions exercised Unicode separator entry, RGB entry, save/activate/reopen, picker cancellation, scrolling, and resizing at 60×18, 80×24, 80×25, 80×30, and 120×40. Fresh raster captures were inspected at compact and wide sizes with color and without color. Terminal settings matched before/after exit; alternate screen was off and cursor visible afterward.
+- Startup comparison: 60 alternating warm invocations of debug binaries, equivalent Default settings, the same controlled payload, and separate temporary config roots produced identical ANSI bytes. Median launch/render time was 69.11 ms before and 9.19 ms after; p95 was 71.96 ms before and 13.14 ms after. This local comparison found no startup regression; it is not a release-build performance guarantee.
+- User-facing instructions and the schema example are in [CONFIGURATION.md](CONFIGURATION.md) and [examples/config.toml](../examples/config.toml). Personal old-theme conversion remains the agreed separate follow-up; no migration code or personal config changes were made.
 
 ## 1. Target model and scope
 
@@ -34,9 +44,9 @@ Keep component collection and existing payload support intact. This is not a red
 
 There are no existing external users yet; the FOSS announcement is still ahead. Do not build migration commands, old-format readers, or compatibility storage paths. The maintainer's personal configs will receive a separate one-off conversion after the refactor, outside the shipped product and this implementation scope.
 
-## 2. Current implementation and constraints
+## 2. Pre-refactor implementation and constraints
 
-These observations are grounded in the current checkout:
+These observations describe the checkout used when planning the refactor:
 
 | Area | Current behavior | Refactor consequence |
 | --- | --- | --- |
@@ -368,18 +378,18 @@ Measure repeated statusline invocations against the pre-refactor baseline using 
 
 The refactor is complete when:
 
-- [ ] A theme contains exactly three named associations and can be the sole active selection.
-- [ ] Every config kind supports presets and named customs, independent management, and reuse across themes.
-- [ ] TUI and CLI output resolve the same values, including dynamic model icons and separator behavior.
-- [ ] Duplicate reuses references by default; extended Full fork creates independent configs; shared-config edits default to a copy, with explicit shared editing available.
-- [ ] Normal Save commits the current context and required related drafts; Save all commits all drafts; unrelated drafts remain pending after a scoped save.
-- [ ] Four TUI sections retain drafts while navigating, and every component config exposes all supported components with toggle/reorder controls and new additions disabled.
-- [ ] Saving changes used by the active theme affects the next render without reactivation or an activation snapshot.
-- [ ] Renaming/deleting resources cannot leave dangling references through application actions.
-- [ ] No migration code, old-format readers, or compatibility persistence paths ship; existing personal theme files remain untouched for the later one-off conversion.
-- [ ] Failed saves retain recoverable drafts and cannot trigger activation or exit as if successful.
-- [ ] Piped rendering is read-only, and catalog/preset selection no longer depends on scanning flattened themes.
-- [ ] Documentation explains resource ownership, source-qualified names, storage, sharing, Duplicate versus Full fork, scoped saving, activation, and the built-in customization workflow.
+- [x] A theme contains exactly three named associations and can be the sole active selection.
+- [x] Every config kind supports presets and named customs, independent management, and reuse across themes.
+- [x] TUI and CLI output resolve the same values, including dynamic model icons and separator behavior.
+- [x] Duplicate reuses references by default; extended Full fork creates independent configs; shared-config edits default to a copy, with explicit shared editing available.
+- [x] Normal Save commits the current context and required related drafts; Save all commits all drafts; unrelated drafts remain pending after a scoped save.
+- [x] Four TUI sections retain drafts while navigating, and every component config exposes all supported components with toggle/reorder controls and new additions disabled.
+- [x] Saving changes used by the active theme affects the next render without reactivation or an activation snapshot.
+- [x] Renaming/deleting resources cannot leave dangling references through application actions.
+- [x] No migration code, old-format readers, or compatibility persistence paths ship; existing personal theme files remain untouched for the later one-off conversion.
+- [x] Failed saves retain recoverable drafts and cannot trigger activation or exit as if successful.
+- [x] Piped rendering is read-only, and catalog/preset selection no longer depends on scanning flattened themes.
+- [x] Documentation explains resource ownership, source-qualified names, storage, sharing, Duplicate versus Full fork, scoped saving, activation, and the built-in customization workflow.
 
 Accepted decisions from review:
 

@@ -299,10 +299,10 @@ impl Session {
                 }
             }
         }
-        self.draft.active_theme = candidate.active_theme;
         self.groups.retain(|g| g.is_disjoint(&scope));
         self.renames
             .retain(|op| !scope.contains(&(op.kind, op.new.clone())));
+        self.rebase_active_reference();
         Ok(())
     }
 
@@ -323,8 +323,18 @@ impl Session {
         let mut catalog = self.store.base.clone();
         catalog.active_theme = theme.clone();
         self.store.save(&catalog)?;
-        self.draft.active_theme = theme.clone();
+        self.rebase_active_reference();
         Ok(())
+    }
+
+    fn rebase_active_reference(&mut self) {
+        let mut active = self.store.base.active_theme.clone();
+        for op in &self.renames {
+            if op.kind == Kind::Theme && op.old == active {
+                active = op.new.clone();
+            }
+        }
+        self.draft.active_theme = active;
     }
 
     pub fn discard(&mut self) {
@@ -467,5 +477,42 @@ mod tests {
                 .styles
                 .text_bold
         );
+    }
+    #[test]
+    fn saving_an_unrelated_config_preserves_a_pending_active_theme_rename() {
+        let (_dir, mut s) = session();
+        let theme = s
+            .duplicate_theme(&ResourceRef::builtin("Default"), "Work", false)
+            .unwrap();
+        s.save_all(Some(theme.clone())).unwrap();
+        let renamed = s.rename(Kind::Theme, &theme, "Renamed").unwrap();
+        let spare = s
+            .copy(Kind::Icons, &ResourceRef::builtin("Emoji"), "Spare")
+            .unwrap();
+        s.save(Kind::Icons, &spare, None).unwrap();
+        assert_eq!(s.store.base.active_theme, theme);
+        assert_eq!(s.draft.active_theme, renamed);
+        s.draft.validate().unwrap();
+        s.save_all(None).unwrap();
+        assert_eq!(s.store.base.active_theme, renamed);
+    }
+
+    #[test]
+    fn explicitly_saving_an_incomplete_component_config_materializes_and_clears_it() {
+        let (dir, mut s) = session();
+        s.draft
+            .component_configs
+            .insert("Partial".into(), ComponentProfile::default());
+        s.save_all(None).unwrap();
+        let reference = ResourceRef::user("Partial");
+        s.save(Kind::Components, &reference, None).unwrap();
+        assert!(!s.any_dirty());
+        let reopened = Store::open(dir.path()).unwrap();
+        let c = &reopened.base.component_configs["Partial"];
+        assert_eq!(
+            c.components.len(),
+            super::super::types::ComponentId::data_components().count()
+        );
+        assert!(c.components.iter().all(|c| !c.enabled));
     }
 }
