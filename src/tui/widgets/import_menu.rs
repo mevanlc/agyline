@@ -6,7 +6,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Flex, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, Clear, List, ListItem},
 };
 
@@ -17,10 +17,10 @@ pub fn render_colors(f: &mut Frame, area: Rect, selection: usize, theme: &UserTh
     let texts = render::demo_texts_compact();
 
     // Pad names to max width
-    let max_name_len = schemes
+    let max_name_width = schemes
         .iter()
-        .map(|s| s.name.len())
-        .chain(user_themes.iter().map(|(n, _)| n.len()))
+        .map(|s| Text::raw(s.name).width())
+        .chain(user_themes.iter().map(|(n, _)| Text::raw(n).width()))
         .max()
         .unwrap_or(0);
 
@@ -71,7 +71,8 @@ pub fn render_colors(f: &mut Frame, area: Rect, selection: usize, theme: &UserTh
 
         let cursor = if i == selection { "> " } else { "  " };
         let cursor_style = item_style(i, selection);
-        let padded_name = format!("{:<width$} ", scheme.name, width = max_name_len);
+        let pad = max_name_width.saturating_sub(Text::raw(scheme.name).width());
+        let padded_name = format!("{}{} ", scheme.name, " ".repeat(pad));
 
         let mut spans = vec![
             Span::styled(cursor.to_string(), cursor_style),
@@ -94,7 +95,8 @@ pub fn render_colors(f: &mut Frame, area: Rect, selection: usize, theme: &UserTh
         let idx = schemes.len() + i;
         let cursor = if idx == selection { "> " } else { "  " };
         let cursor_style = item_style(idx, selection);
-        let padded_name = format!("{:<width$} ", name, width = max_name_len);
+        let pad = max_name_width.saturating_sub(Text::raw(name).width());
+        let padded_name = format!("{}{} ", name, " ".repeat(pad));
 
         let mut spans = vec![
             Span::styled(cursor.to_string(), cursor_style),
@@ -132,11 +134,11 @@ pub fn render_icons(f: &mut Frame, area: Rect, selection: usize, theme: &UserThe
     let icon_sets = filter_icon_sets(&user_theme_data);
     let texts = render::demo_texts_compact();
 
-    // Pad names to max width (all ASCII, so len() == display width)
-    let max_name_len = icon_sets
+    // Pad names to max width
+    let max_name_width = icon_sets
         .iter()
-        .map(|s| s.name.len())
-        .chain(user_themes.iter().map(|(n, _)| n.len()))
+        .map(|s| Text::raw(s.name).width())
+        .chain(user_themes.iter().map(|(n, _)| Text::raw(n).width()))
         .max()
         .unwrap_or(0);
 
@@ -197,7 +199,8 @@ pub fn render_icons(f: &mut Frame, area: Rect, selection: usize, theme: &UserThe
 
         let cursor = if i == selection { "> " } else { "  " };
         let cursor_style = item_style(i, selection);
-        let padded_name = format!("{:<width$} ", set.name, width = max_name_len);
+        let pad = max_name_width.saturating_sub(Text::raw(set.name).width());
+        let padded_name = format!("{}{} ", set.name, " ".repeat(pad));
 
         let mut spans = vec![
             Span::styled(cursor.to_string(), cursor_style),
@@ -220,7 +223,8 @@ pub fn render_icons(f: &mut Frame, area: Rect, selection: usize, theme: &UserThe
         let idx = icon_sets.len() + i;
         let cursor = if idx == selection { "> " } else { "  " };
         let cursor_style = item_style(idx, selection);
-        let padded_name = format!("{:<width$} ", name, width = max_name_len);
+        let pad = max_name_width.saturating_sub(Text::raw(name).width());
+        let padded_name = format!("{}{} ", name, " ".repeat(pad));
 
         let mut spans = vec![
             Span::styled(cursor.to_string(), cursor_style),

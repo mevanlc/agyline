@@ -11,7 +11,7 @@ use ratatui::{
     Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, List, ListItem},
 };
 
@@ -387,7 +387,7 @@ impl EditorWidget {
 
         let label_col_width = field_data
             .iter()
-            .map(|(l, _, _)| l.len())
+            .map(|(l, _, _)| Text::raw(*l).width())
             .max()
             .unwrap_or(0)
             + 1;
@@ -409,16 +409,13 @@ impl EditorWidget {
 
                 let cursor = if is_selected { "> " } else { "  " };
 
+                let label_text = format!("{}:", label);
+                let pad = label_col_width.saturating_sub(Text::raw(&label_text).width());
+                let padded_label = format!("{}{} ", label_text, " ".repeat(pad));
+
                 let mut spans = vec![
                     Span::styled(cursor, style),
-                    Span::styled(
-                        format!(
-                            "{:<width$} ",
-                            format!("{}:", label),
-                            width = label_col_width
-                        ),
-                        style,
-                    ),
+                    Span::styled(padded_label, style),
                     Span::styled(value.clone(), Style::default().fg(Color::White)),
                 ];
 

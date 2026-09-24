@@ -2,7 +2,7 @@ use ratatui::{
     Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, Paragraph},
 };
 use std::path::PathBuf;
@@ -25,10 +25,10 @@ pub fn render(
 
     // Build entries with their display widths
     let sep = "  \u{2502}  "; // " │ "
-    let sep_w = Span::raw(sep).width();
+    let sep_w = Text::raw(sep).width();
     let arrow_left = " < ";
     let arrow_right = " > ";
-    let arrow_w = Span::raw(arrow_left).width();
+    let arrow_w = Text::raw(arrow_left).width();
 
     let entries: Vec<(String, bool)> = themes
         .iter()
@@ -48,7 +48,7 @@ pub fn render(
     let mut end = current_index + 1;
 
     // Width of just the selected entry + arrows
-    let entry_width = |i: usize| Span::raw(&entries[i].0).width();
+    let entry_width = |i: usize| Text::raw(&entries[i].0).width();
 
     let mut total_w = arrow_w * 2 + entry_width(current_index);
 

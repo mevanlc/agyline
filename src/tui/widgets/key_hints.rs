@@ -1,6 +1,6 @@
 use ratatui::{
     style::{Color, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
 };
 
 /// Style applied to the `[` `]` brackets around keys.
@@ -40,8 +40,8 @@ pub fn render_grid(rows: &[&[(&str, &str)]]) -> Vec<Line<'static>> {
 
     for row in rows {
         for (col, (key, label)) in row.iter().enumerate() {
-            key_widths[col] = key_widths[col].max(key.chars().count() + 2); // +2 for []
-            label_widths[col] = label_widths[col].max(label.chars().count());
+            key_widths[col] = key_widths[col].max(Text::raw(*key).width() + 2); // +2 for []
+            label_widths[col] = label_widths[col].max(Text::raw(*label).width());
         }
     }
 
@@ -54,7 +54,7 @@ pub fn render_grid(rows: &[&[(&str, &str)]]) -> Vec<Line<'static>> {
                 }
 
                 // Right-align key: pad left
-                let key_w = key.chars().count() + 2; // +2 for []
+                let key_w = Text::raw(*key).width() + 2; // +2 for []
                 let pad = key_widths[col].saturating_sub(key_w);
                 if pad > 0 {
                     spans.push(Span::raw(" ".repeat(pad)));
@@ -67,7 +67,7 @@ pub fn render_grid(rows: &[&[(&str, &str)]]) -> Vec<Line<'static>> {
                 spans.push(Span::raw(" ".to_string()));
 
                 // Left-align label: pad right
-                let label_w = label.chars().count();
+                let label_w = Text::raw(*label).width();
                 let label_pad = label_widths[col].saturating_sub(label_w);
                 spans.push(Span::styled(label.to_string(), label_style()));
                 if label_pad > 0 {
@@ -83,4 +83,22 @@ pub fn render_grid(rows: &[&[(&str, &str)]]) -> Vec<Line<'static>> {
 pub fn render(pairs: &[(&str, &str)]) -> Line<'static> {
     let rows = render_grid(&[pairs]);
     rows.into_iter().next().unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_render_grid_alignment_with_unicode_arrows() {
+        let rows = [
+            &[("\u{2190}\u{2192}", "Panel"), ("C", "Colors")][..],
+            &[("Space", "Edit/Toggle"), ("I", "Icons")][..],
+        ];
+        let lines = render_grid(&rows);
+        assert_eq!(lines.len(), 2);
+
+        // Both lines should have the same total width
+        assert_eq!(lines[0].width(), lines[1].width());
+    }
 }

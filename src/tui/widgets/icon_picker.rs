@@ -4,7 +4,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Flex, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 
@@ -253,12 +253,11 @@ fn render_icon_list(f: &mut Frame, area: Rect, state: &IconPickerState, catalog:
                         ),
                         // Fill remaining width with selection background
                         Span::styled(
-                            " ".repeat(
-                                inner
-                                    .width
-                                    .saturating_sub((icon.chars().count() + name.len() + 3) as u16)
-                                    as usize,
-                            ),
+                            " ".repeat(inner.width.saturating_sub(
+                                (Text::raw(icon.as_str()).width()
+                                    + Text::raw(name.as_str()).width()
+                                    + 3) as u16,
+                            ) as usize),
                             Style::default().bg(Color::Indexed(238)),
                         ),
                     ]));
@@ -284,7 +283,7 @@ fn render_icon_list(f: &mut Frame, area: Rect, state: &IconPickerState, catalog:
         let total_pages = total_flat.div_ceil(visible_height);
         let current_page = scroll / visible_height + 1;
         let counter = format!(" Page {}/{} ", current_page, total_pages);
-        let counter_width = counter.len() as u16;
+        let counter_width = Text::raw(&counter).width() as u16;
         let counter_area = Rect {
             x: area.x + area.width.saturating_sub(counter_width + 1),
             y: area.y + area.height - 1,
