@@ -1,4 +1,4 @@
-use crate::config::theme::UserTheme;
+use crate::config::theme::ResolvedTheme;
 use crate::config::types::{
     ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
     DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
@@ -10,11 +10,11 @@ use crate::core::components::{ComponentData, METADATA_DISPLAYED_BRANCH};
 use crate::core::render;
 
 pub struct StatusLineGenerator<'a> {
-    theme: &'a UserTheme,
+    theme: &'a ResolvedTheme,
 }
 
 impl<'a> StatusLineGenerator<'a> {
-    pub fn new(theme: &'a UserTheme) -> Self {
+    pub fn new(theme: &'a ResolvedTheme) -> Self {
         Self { theme }
     }
 
@@ -22,27 +22,48 @@ impl<'a> StatusLineGenerator<'a> {
         let (texts, dynamic_icons) =
             render::texts_and_icons_from_data_for_mode(&components, self.theme.style.mode);
 
-        // Build the render line, then patch in any dynamic icon overrides
-        let mut line =
-            render::build_render_line(&self.theme.components, self.theme.style.mode, &texts);
-
-        // Apply dynamic icon overrides (e.g. from component metadata)
-        if !dynamic_icons.is_empty() {
-            for item in &mut line.items {
-                if let render::RenderItem::Seg(seg) = item
-                    && let Some(icon_override) = dynamic_icons.get(&seg.id)
-                {
-                    seg.icon = icon_override.clone();
-                }
-            }
-        }
+        let mut line = render::build_theme_line(self.theme, &texts);
+        render::apply_dynamic_icons(&mut line, &dynamic_icons);
 
         render::render_ansi(&line)
     }
 }
 
+pub fn collect_model(
+    comp_cfg: &ComponentConfig,
+    input: &crate::core::input::InputData,
+) -> Option<ComponentData> {
+    use crate::core::components::{Component, ModelComponent};
+    let effort = crate::config::types::ModelEffort::from_options(&comp_cfg.options);
+    let thinking_icon = comp_cfg
+        .options
+        .get("thinking_icon")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let search = comp_cfg
+        .options
+        .get(MODEL_OPTION_SEARCH)
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let replace = comp_cfg
+        .options
+        .get(MODEL_OPTION_REPLACE)
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    ModelComponent::new()
+        .with_per_model(comp_cfg.icon.per_model.clone())
+        .with_effort(effort)
+        .with_thinking_icon(thinking_icon)
+        .with_search(search)
+        .with_replace(replace)
+        .collect(input)
+}
+
 pub fn collect_all_components(
-    theme: &UserTheme,
+    theme: &ResolvedTheme,
     input: &crate::core::input::InputData,
 ) -> Vec<(ComponentConfig, ComponentData)> {
     use crate::core::components::*;
@@ -56,34 +77,7 @@ pub fn collect_all_components(
 
         let data = match comp_cfg.id {
             ComponentId::AgentState => AgentStateComponent::new().collect(input),
-            ComponentId::Model => {
-                let effort = crate::config::types::ModelEffort::from_options(&comp_cfg.options);
-                let thinking_icon = comp_cfg
-                    .options
-                    .get("thinking_icon")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                let search = comp_cfg
-                    .options
-                    .get(MODEL_OPTION_SEARCH)
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                let replace = comp_cfg
-                    .options
-                    .get(MODEL_OPTION_REPLACE)
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                ModelComponent::new()
-                    .with_per_model(comp_cfg.icon.per_model.clone())
-                    .with_effort(effort)
-                    .with_thinking_icon(thinking_icon)
-                    .with_search(search)
-                    .with_replace(replace)
-                    .collect(input)
-            }
+            ComponentId::Model => collect_model(comp_cfg, input),
             ComponentId::Directory => DirectoryComponent::new().collect(input),
             ComponentId::Git => {
                 let show_sha = comp_cfg
@@ -197,7 +191,7 @@ fn autohide_duplicate_git_branch(components: &mut [(ComponentConfig, ComponentDa
 #[cfg(test)]
 mod tests {
     use super::collect_all_components;
-    use crate::config::theme::UserTheme;
+    use crate::config::theme::ResolvedTheme;
     use crate::config::types::{
         ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, WORKTREE_OPTION_OUTSIDE_WORKTREES,
     };
@@ -220,7 +214,7 @@ mod tests {
         }))
         .unwrap();
 
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         for component in &mut theme.components {
             component.enabled = matches!(
                 component.id,
@@ -247,7 +241,7 @@ mod tests {
         }))
         .unwrap();
 
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         for component in &mut theme.components {
             component.enabled = matches!(component.id, ComponentId::Worktree | ComponentId::Git);
         }

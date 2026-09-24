@@ -124,6 +124,63 @@ pub fn build_render_line(
     RenderLine { items }
 }
 
+pub fn build_theme_line(
+    theme: &crate::config::theme::ResolvedTheme,
+    texts: &HashMap<ComponentId, SegmentText>,
+) -> RenderLine {
+    let mut line = build_render_line(&theme.components, theme.style.mode, texts);
+    if matches!(
+        theme.style.mode,
+        StyleMode::Powerline | StyleMode::PlainPowerline
+    ) {
+        let glyph = if theme.style.mode == StyleMode::Powerline {
+            &theme.powerline_nerd_font
+        } else {
+            &theme.powerline_plain
+        };
+        for item in &mut line.items {
+            if let RenderItem::Sep(s) = item {
+                s.glyph = glyph.clone();
+            }
+        }
+    }
+    line
+}
+
+pub fn apply_dynamic_icons(line: &mut RenderLine, icons: &HashMap<ComponentId, String>) {
+    for item in &mut line.items {
+        if let RenderItem::Seg(s) = item
+            && let Some(icon) = icons.get(&s.id)
+        {
+            s.icon = icon.clone();
+        }
+    }
+}
+
+pub fn demo_line(theme: &crate::config::theme::ResolvedTheme) -> RenderLine {
+    let mut texts = demo_texts_for_components(&theme.components);
+    let mut icons = HashMap::new();
+    if let Some(c) = theme.get_component(ComponentId::Model) {
+        let input = crate::core::input::InputData {
+            model: crate::core::input::Model {
+                id: "gemini-3.7-flash".into(),
+                display_name: "Gemini 3.7 Flash".into(),
+                effort: Some("high".into()),
+            },
+            ..Default::default()
+        };
+        if let Some(data) = crate::core::statusline::collect_model(c, &input) {
+            let (model_text, model_icons) =
+                texts_and_icons_from_data_for_mode(&[(c.clone(), data)], theme.style.mode);
+            texts.extend(model_text);
+            icons.extend(model_icons);
+        }
+    }
+    let mut line = build_theme_line(theme, &texts);
+    apply_dynamic_icons(&mut line, &icons);
+    line
+}
+
 fn powerline_separator_glyph(mode: StyleMode) -> &'static str {
     match mode {
         StyleMode::PlainPowerline => PLAIN_POWERLINE_SEPARATOR_GLYPH,
@@ -710,7 +767,7 @@ pub fn ansi_to_ratatui_color(color: &AnsiColor) -> Color {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::config::theme::UserTheme;
+    use crate::config::theme::ResolvedTheme;
     use crate::config::types::{
         ComponentId, GIT_OPTION_AUTOHIDE_BRANCH, PR_OPTION_SHOW_REVIEW_STATE, PR_OPTION_SHOW_URL,
         StyleMode, WORKTREE_OPTION_OUTSIDE_WORKTREES, WorktreeOutside,
@@ -723,7 +780,7 @@ mod tests {
 
     #[test]
     fn pull_request_demo_tracks_visible_fields() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         let pull_request = theme.get_component_mut(ComponentId::PullRequest).unwrap();
         pull_request.options.insert(
             PR_OPTION_SHOW_REVIEW_STATE.into(),
@@ -745,7 +802,7 @@ mod tests {
 
     #[test]
     fn worktree_demo_tracks_the_outside_worktrees_mode() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         for (mode, expected) in [
             (WorktreeOutside::Hide, None),
             (WorktreeOutside::Show, Some("-")),
@@ -773,7 +830,7 @@ mod tests {
 
     #[test]
     fn git_demo_autohides_only_a_branch_displayed_by_worktree() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         theme.get_component_mut(ComponentId::Git).unwrap().enabled = true;
         theme
             .get_component_mut(ComponentId::Worktree)
@@ -818,7 +875,7 @@ mod tests {
 
     #[test]
     fn plain_powerline_uses_solid_pointer_separator() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         let powerline = crate::presets::icon_sets::find("Powerline").unwrap();
         let scheme = crate::presets::color_schemes::find("Powerline Dark").unwrap();
         powerline.apply_to(&mut theme.components);
@@ -843,7 +900,7 @@ mod tests {
 
     #[test]
     fn render_ansi_resets_after_plain_powerline_line() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         let powerline = crate::presets::icon_sets::find("Powerline").unwrap();
         let scheme = crate::presets::color_schemes::find("Powerline Dark").unwrap();
         powerline.apply_to(&mut theme.components);
@@ -874,5 +931,63 @@ mod tests {
         assert_eq!(Text::raw("\u{f108}").width(), 1);
         // Multi-line text width is the maximum width of any line
         assert_eq!(Text::raw("short\nlonger line\nhi").width(), 11);
+    }
+}
+
+#[cfg(test)]
+mod resolved_tests {
+    use super::*;
+    use crate::{
+        config::{catalog::Catalog, types::ModelTierIcons},
+        core::{
+            input::{InputData, Model},
+            statusline::{StatusLineGenerator, collect_all_components},
+        },
+    };
+    #[test]
+    fn preview_and_ansi_agree_on_dynamic_model_glyphs_and_custom_connectors() {
+        let catalog = Catalog::default();
+        let mut theme = catalog.resolve(&catalog.active_theme).unwrap();
+        theme.components.retain(|c| {
+            matches!(
+                c.id,
+                ComponentId::AgentState | ComponentId::Model | ComponentId::Separator
+            )
+        });
+        let model = theme
+            .components
+            .iter_mut()
+            .find(|c| c.id == ComponentId::Model)
+            .unwrap();
+        model.icon.per_model.as_mut().unwrap().flash = ModelTierIcons::new("FLASH", "nf-FLASH");
+        model.options.insert("thinking_icon".into(), "💭".into());
+        theme.powerline_plain = " >> ".into();
+        theme.powerline_nerd_font = " nf>> ".into();
+        let input = InputData {
+            model: Model {
+                id: "gemini-3.7-flash".into(),
+                display_name: "Gemini 3.7 Flash".into(),
+                effort: Some("high".into()),
+            },
+            agent_state: Some("idle".into()),
+            ..Default::default()
+        };
+        for mode in [
+            StyleMode::Plain,
+            StyleMode::NerdFont,
+            StyleMode::PlainPowerline,
+            StyleMode::Powerline,
+        ] {
+            theme.style.mode = mode;
+            let actual =
+                StatusLineGenerator::new(&theme).generate(collect_all_components(&theme, &input));
+            assert_eq!(actual, render_ansi(&demo_line(&theme)));
+            assert!(actual.contains("FLASH"));
+            if mode == StyleMode::PlainPowerline {
+                assert!(actual.contains(" >> "));
+            } else if mode == StyleMode::Powerline {
+                assert!(actual.contains(" nf>> "));
+            }
+        }
     }
 }

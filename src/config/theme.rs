@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use crate::config::types::{
     AnsiColor, ColorConfig, ComponentConfig, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH,
     DEFAULT_HOSTNAME_RSTRIP, DEFAULT_MODEL_SHOW_EFFORT, DEFAULT_PR_OSC_HYPERLINKS,
@@ -10,12 +8,11 @@ use crate::config::types::{
     WorktreeOutside,
 };
 
-/// A complete user theme — settings + colors + icons for all components.
-/// Stored as a .toml file under ~/.claude/xline/themes/{Name}.toml
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserTheme {
-    /// Whether this is the active theme.
-    pub active: bool,
+/// Runtime assembly of a named theme and its three resources. Never persisted.
+#[derive(Debug, Clone)]
+pub struct ResolvedTheme {
+    pub powerline_plain: String,
+    pub powerline_nerd_font: String,
 
     /// Style configuration (mode: plain/nerd_font/powerline).
     pub style: StyleConfig,
@@ -25,7 +22,7 @@ pub struct UserTheme {
     pub components: Vec<ComponentConfig>,
 }
 
-impl UserTheme {
+impl ResolvedTheme {
     /// Create a default theme with sensible starting values.
     pub fn default_theme() -> Self {
         use ComponentId::*;
@@ -433,7 +430,8 @@ impl UserTheme {
         ];
 
         Self {
-            active: true,
+            powerline_plain: "►".into(),
+            powerline_nerd_font: "\u{e0b0}".into(),
             style: StyleConfig {
                 mode: StyleMode::Plain,
             },
@@ -449,32 +447,6 @@ impl UserTheme {
     /// Get a mutable component config by id.
     pub fn get_component_mut(&mut self, id: ComponentId) -> Option<&mut ComponentConfig> {
         self.components.iter_mut().find(|c| c.id == id)
-    }
-
-    /// Add components introduced after this theme was saved, preserving the
-    /// theme's existing component order and placing additions in default order.
-    pub fn add_missing_components(&mut self) {
-        self.components.retain(|c| c.id != ComponentId::Unknown);
-        let defaults = Self::default_theme().components;
-
-        for (index, default) in defaults.iter().enumerate() {
-            if self.get_component(default.id).is_some() {
-                continue;
-            }
-
-            let insert_at = defaults[index + 1..]
-                .iter()
-                .find_map(|next| self.components.iter().position(|c| c.id == next.id))
-                .unwrap_or(self.components.len());
-            let mut addition = default.clone();
-            if addition.id == ComponentId::Worktree {
-                // Preserve the visible output of existing themes. Fresh themes
-                // enable Worktree instead of Git, but migration should not
-                // silently replace an existing theme's Git segment.
-                addition.enabled = false;
-            }
-            self.components.insert(insert_at, addition);
-        }
     }
 
     /// Get the separator component.
@@ -499,7 +471,7 @@ mod tests {
 
     #[test]
     fn test_default_theme_has_all_components() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         for id in ComponentId::ALL {
             assert!(
                 theme.get_component(*id).is_some(),
@@ -511,19 +483,13 @@ mod tests {
 
     #[test]
     fn test_separator_is_last() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         assert_eq!(theme.components.last().unwrap().id, ComponentId::Separator);
     }
 
     #[test]
-    fn test_default_theme_is_active() {
-        let theme = UserTheme::default_theme();
-        assert!(theme.active);
-    }
-
-    #[test]
     fn test_rate_limit_components_are_independent_and_disabled_by_default() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let five_hour = theme.get_component(ComponentId::UsageFiveHour).unwrap();
         let seven_day = theme.get_component(ComponentId::UsageSevenDay).unwrap();
 
@@ -534,7 +500,7 @@ mod tests {
 
     #[test]
     fn test_pull_request_defaults_are_compact_and_hyperlinked() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let pull_request = theme.get_component(ComponentId::PullRequest).unwrap();
 
         assert!(!pull_request.enabled);
@@ -563,7 +529,7 @@ mod tests {
 
     #[test]
     fn test_git_enabled_in_fresh_themes() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let git = theme.get_component(ComponentId::Git).unwrap();
         let state = theme.get_component(ComponentId::AgentState).unwrap();
         let task_count = theme.get_component(ComponentId::TaskCount).unwrap();
@@ -581,7 +547,7 @@ mod tests {
 
     #[test]
     fn test_model_defaults_have_per_model_icons_and_effort_enabled() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let model = theme.get_component(ComponentId::Model).unwrap();
 
         assert!(model.enabled);
@@ -590,79 +556,5 @@ mod tests {
             crate::config::types::ModelEffort::from_options(&model.options),
             crate::config::types::ModelEffort::Show
         );
-    }
-
-    #[test]
-    fn test_add_missing_components_uses_default_order() {
-        let mut theme = UserTheme::default_theme();
-        theme.components.retain(|c| {
-            c.id != ComponentId::Worktree
-                && c.id != ComponentId::Hostname
-                && c.id != ComponentId::PullRequest
-        });
-
-        theme.add_missing_components();
-
-        let email = theme
-            .components
-            .iter()
-            .position(|c| c.id == ComponentId::Email)
-            .unwrap();
-        let worktree = &theme.components[email + 1];
-        assert_eq!(worktree.id, ComponentId::Worktree);
-        assert!(!worktree.enabled);
-        assert_eq!(
-            WorktreeOutside::from_options(&worktree.options),
-            WorktreeOutside::default()
-        );
-        assert_eq!(
-            worktree
-                .options
-                .get(WORKTREE_OPTION_SHOW_ORIGINAL_BRANCH)
-                .and_then(|value| value.as_bool()),
-            Some(false)
-        );
-
-        assert_eq!(theme.components[email + 2].id, ComponentId::Hostname);
-        assert!(!theme.components[email + 2].enabled);
-        assert_eq!(
-            theme.components[email + 2]
-                .options
-                .get("rstrip")
-                .and_then(|value| value.as_str()),
-            Some(DEFAULT_HOSTNAME_RSTRIP)
-        );
-
-        let pull_request = &theme.components[email + 3];
-        assert_eq!(pull_request.id, ComponentId::PullRequest);
-        assert!(!pull_request.enabled);
-        assert_eq!(
-            pull_request
-                .options
-                .get(PR_OPTION_OSC_HYPERLINKS)
-                .and_then(|value| value.as_bool()),
-            Some(true)
-        );
-    }
-
-    #[test]
-    fn test_roundtrip_toml() {
-        let theme = UserTheme::default_theme();
-        let toml_str = toml::to_string_pretty(&theme).unwrap();
-        let parsed: UserTheme = toml::from_str(&toml_str).unwrap();
-        assert_eq!(parsed.active, theme.active);
-        assert_eq!(parsed.style.mode, theme.style.mode);
-        assert_eq!(parsed.components.len(), theme.components.len());
-        for (a, b) in parsed.components.iter().zip(theme.components.iter()) {
-            assert_eq!(a.id, b.id);
-            assert_eq!(a.enabled, b.enabled);
-            assert_eq!(a.icon.plain, b.icon.plain);
-            assert_eq!(a.icon.nerd_font, b.icon.nerd_font);
-            assert_eq!(a.colors.icon, b.colors.icon);
-            assert_eq!(a.colors.text, b.colors.text);
-            assert_eq!(a.colors.background, b.colors.background);
-            assert_eq!(a.styles.text_bold, b.styles.text_bold);
-            assert_eq!(a.options, b.options);
-        }
     }
 }

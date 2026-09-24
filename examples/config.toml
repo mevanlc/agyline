@@ -1,0 +1,54 @@
+# Copy this entire catalog into an isolated config directory to try it.
+schema_version = 2
+active_theme = { source = "user", name = "Workday" }
+
+[themes.Workday]
+description = "A compact statusline with independently reusable configs"
+components = { source = "user", name = "Compact" }
+icons = { source = "user", name = "Simple glyphs" }
+colors = { source = "user", name = "Blue" }
+
+[component_configs.Compact]
+description = "Only model and directory are enabled"
+
+[[component_configs.Compact.components]]
+id = "model"
+enabled = true
+options = { show_effort = "show" }
+
+[[component_configs.Compact.components]]
+id = "directory"
+enabled = true
+
+[icon_configs."Simple glyphs"]
+glyph_mode = "plain"
+powerline = false
+
+[icon_configs."Simple glyphs".defaults]
+plain = ""
+nerd_font = ""
+
+[icon_configs."Simple glyphs".components.model]
+plain = "🤖"
+nerd_font = "󰧑"
+thinking_icon = "💭"
+
+[icon_configs."Simple glyphs".separator]
+enabled = true
+plain = " · "
+nerd_font = " · "
+powerline_plain = "►"
+powerline_nerd_font = ""
+
+[color_configs.Blue.defaults]
+icon = { c256 = 75 }
+text = { c256 = 252 }
+text_bold = false
+
+[color_configs.Blue.components.model]
+icon = { c256 = 75 }
+text = { c256 = 75 }
+text_bold = true
+
+[color_configs.Blue.separator]
+icon = { c16 = 8 }

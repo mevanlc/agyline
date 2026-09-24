@@ -1,8 +1,8 @@
 use crate::data::icon_catalog::{IconCatalogData, IconEntry, IconPickerTab, SectionView};
-use crate::tui::app::IconPickerState;
+use crate::tui::editor_state::IconPickerState;
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Flex, Layout, Rect},
+    layout::{Constraint, Flex, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
@@ -51,7 +51,7 @@ pub fn entry_at_selectable<'a>(
 }
 
 pub fn render(f: &mut Frame, area: Rect, state: &IconPickerState, catalog: &IconCatalogData) {
-    let popup = centered_rect(56, 26, area);
+    let (popup, layout) = geometry(area);
     f.render_widget(Clear, popup);
 
     let tab = *state.tab.current();
@@ -64,21 +64,42 @@ pub fn render(f: &mut Frame, area: Rect, state: &IconPickerState, catalog: &Icon
         .border_style(Style::default().fg(Color::DarkGray))
         .title(" Icon Picker ");
 
-    let inner = outer_block.inner(popup);
     f.render_widget(outer_block, popup);
 
-    let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Icon Set tabs
-            Constraint::Length(3), // Search / Input
-            Constraint::Min(3),    // Icons list (or empty for Custom)
-            Constraint::Length(3), // Keymap
-        ])
-        .split(inner);
-
     // --- Icon Set tabs ---
-    render_tabs(f, layout[0], state);
+    if layout[0].height == 1 {
+        let tabs = [
+            IconPickerTab::Emoji,
+            IconPickerTab::NerdFont,
+            IconPickerTab::Unicode,
+            IconPickerTab::Custom,
+        ];
+        let labels = ["Emoji", "Nerd", "Unicode", "Custom"];
+        f.render_widget(
+            Paragraph::new(Line::from(
+                tabs.iter()
+                    .zip(labels)
+                    .map(|(t, l)| {
+                        Span::styled(
+                            if state.tab == *t {
+                                format!("[{l}]")
+                            } else {
+                                format!(" {l} ")
+                            },
+                            Style::default().fg(if state.tab == *t {
+                                Color::Yellow
+                            } else {
+                                Color::Gray
+                            }),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )),
+            layout[0],
+        );
+    } else {
+        render_tabs(f, layout[0], state);
+    }
 
     // --- Search / Input ---
     if is_custom {
@@ -100,17 +121,31 @@ pub fn render(f: &mut Frame, area: Rect, state: &IconPickerState, catalog: &Icon
     }
 
     // --- Keymap ---
-    render_keymap(
-        f,
+    f.render_widget(
+        Paragraph::new("Tab set  ↑↓/Pg list  Enter choose  Esc cancel"),
         layout[3],
-        &[
-            ("Tab", "Switch Set"),
-            ("\u{2190}\u{2192}", "Cursor"),
-            ("\u{2191}\u{2193}", "Navigate"),
-            ("Enter", "Select"),
-            ("Esc", "Cancel"),
-        ],
     );
+}
+
+pub fn geometry(area: Rect) -> (Rect, Vec<Rect>) {
+    let popup = if area.width < 80 || area.height < 26 {
+        area
+    } else {
+        centered_rect(60, 26, area)
+    };
+    let inner = Block::bordered().inner(popup);
+    let parts = Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Length(3),
+        Constraint::Min(2),
+        Constraint::Length(1),
+    ])
+    .split(inner);
+    (popup, parts.to_vec())
+}
+
+pub fn viewport(area: Rect) -> usize {
+    geometry(area).1[2].height.saturating_sub(2) as usize
 }
 
 fn render_tabs(f: &mut Frame, area: Rect, state: &IconPickerState) {
@@ -243,7 +278,7 @@ fn render_icon_list(f: &mut Frame, area: Rect, state: &IconPickerState, catalog:
                 let name = &entry.name;
                 if is_selected {
                     lines.push(Line::from(vec![
-                        Span::styled(format!(" {} ", icon), Style::default().fg(Color::White)),
+                        Span::styled(format!(">{} ", icon), Style::default().fg(Color::White)),
                         Span::styled(
                             name.clone(),
                             Style::default()
@@ -298,19 +333,6 @@ fn render_icon_list(f: &mut Frame, area: Rect, state: &IconPickerState, catalog:
             counter_area,
         );
     }
-}
-
-fn render_keymap(f: &mut Frame, area: Rect, hints: &[(&str, &str)]) {
-    let line = super::key_hints::render(hints);
-
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(Color::Indexed(236)))
-        .title(" Keymap ");
-
-    let para = Paragraph::new(line).block(block);
-    f.render_widget(para, area);
 }
 
 fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {

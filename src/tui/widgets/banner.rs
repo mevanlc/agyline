@@ -1,4 +1,4 @@
-use crate::config::theme::UserTheme;
+use crate::config::theme::ResolvedTheme;
 use crate::core::render;
 use ratatui::{
     Frame,
@@ -60,16 +60,20 @@ fn current_dir_display() -> String {
     "~/p/my/agyline".into()
 }
 
+static METADATA: std::sync::OnceLock<(String, String, String)> = std::sync::OnceLock::new();
+pub fn prepare_metadata() {
+    METADATA.get_or_init(|| (read_cli_version(), read_user_info(), current_dir_display()));
+}
+
 /// Render the official Antigravity CLI header with Gaussian rainbow mascot,
 /// user/model metadata, prompt horizontal rules, and live statusline preview.
-pub fn render(f: &mut Frame, area: Rect, theme: &UserTheme) {
-    let version = read_cli_version();
-    let user_info = read_user_info();
-    let cwd = current_dir_display();
+pub fn render(f: &mut Frame, area: Rect, theme: &ResolvedTheme) {
+    let (version, user_info, cwd) = METADATA
+        .get()
+        .expect("banner metadata prepared before event loop");
     let width = area.width as usize;
 
-    let texts = render::demo_texts_for_components(&theme.components);
-    let statusline_line = render::build_render_line(&theme.components, theme.style.mode, &texts);
+    let statusline_line = render::demo_line(theme);
     let statusline_spans = render::render_spans(&statusline_line);
 
     let lines = vec![
@@ -140,7 +144,7 @@ pub fn render(f: &mut Frame, area: Rect, theme: &UserTheme) {
                     .bg(Color::Rgb(225, 79, 89)),
             ),
             Span::raw("       "),
-            Span::styled(user_info, Style::default().fg(COLOR_MUTED)),
+            Span::styled(user_info.clone(), Style::default().fg(COLOR_MUTED)),
         ]),
         // Row 2: Gaussian Row 3 + Model
         Line::from(vec![
@@ -217,7 +221,7 @@ pub fn render(f: &mut Frame, area: Rect, theme: &UserTheme) {
             ),
             Span::styled("▄", Style::default().fg(Color::Rgb(101, 121, 225))),
             Span::raw("     "),
-            Span::styled(cwd, Style::default().fg(COLOR_MUTED)),
+            Span::styled(cwd.clone(), Style::default().fg(COLOR_MUTED)),
         ]),
         // Row 4: Gaussian Row 5 (Feet)
         Line::from(vec![

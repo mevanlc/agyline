@@ -1,4 +1,4 @@
-use crate::config::theme::UserTheme;
+use crate::config::theme::ResolvedTheme;
 use crate::config::types::{
     AnsiColor, ComponentId, DEFAULT_GIT_AUTOHIDE_BRANCH, DEFAULT_HOSTNAME_RSTRIP,
     DEFAULT_PR_OSC_HYPERLINKS, DEFAULT_PR_SHOW_REVIEW_STATE, DEFAULT_PR_SHOW_URL,
@@ -18,13 +18,17 @@ use ratatui::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FieldSelection {
     Enabled,
-    StyleMode,
+    GlyphMode,
+    Powerline,
+    PowerlinePlain,
+    PowerlineNerd,
     PlainIcon,
     NerdFontIcon,
     HostnameRstrip,
     WorktreeOutside,
     WorktreeOriginalBranch,
     GitAutohideBranch,
+    GitShowSha,
     PrReviewState,
     PrUrl,
     PrOscHyperlinks,
@@ -52,7 +56,7 @@ pub enum FieldSelection {
 impl FieldSelection {
     /// Build the visible field list for a given component.
     pub fn fields_for(comp: &crate::config::types::ComponentConfig) -> Vec<FieldSelection> {
-        let mut fields = vec![Self::Enabled, Self::StyleMode];
+        let mut fields = vec![Self::Enabled];
 
         if comp.id == ComponentId::Model {
             let pm_enabled = comp.icon.per_model.as_ref().is_some_and(|pm| pm.enabled);
@@ -92,6 +96,7 @@ impl FieldSelection {
             }
             if comp.id == ComponentId::Git {
                 fields.push(Self::GitAutohideBranch);
+                fields.push(Self::GitShowSha);
             }
             if comp.id == ComponentId::PullRequest {
                 fields.extend([Self::PrReviewState, Self::PrUrl, Self::PrOscHyperlinks]);
@@ -113,24 +118,72 @@ impl FieldSelection {
         fields
     }
 
-    /// Legacy fixed count for non-model components.
-    pub fn count() -> usize {
-        8
-    }
-
-    /// Legacy index lookup (for non-model components).
-    pub fn from_index(i: usize) -> Self {
-        match i {
-            0 => Self::Enabled,
-            1 => Self::StyleMode,
-            2 => Self::PlainIcon,
-            3 => Self::NerdFontIcon,
-            4 => Self::IconColor,
-            5 => Self::TextColor,
-            6 => Self::BackgroundColor,
-            7 => Self::Bold,
-            _ => Self::Enabled,
+    pub fn fields_for_kind(
+        comp: &crate::config::types::ComponentConfig,
+        kind: crate::config::catalog::Kind,
+    ) -> Vec<Self> {
+        use crate::config::catalog::Kind;
+        if comp.id == ComponentId::Separator {
+            return match kind {
+                Kind::Icons => vec![
+                    Self::GlyphMode,
+                    Self::Powerline,
+                    Self::Enabled,
+                    Self::PlainIcon,
+                    Self::NerdFontIcon,
+                    Self::PowerlinePlain,
+                    Self::PowerlineNerd,
+                ],
+                Kind::Colors => vec![Self::IconColor],
+                _ => vec![],
+            };
         }
+        Self::fields_for(comp)
+            .into_iter()
+            .filter(|field| match kind {
+                Kind::Components => matches!(
+                    field,
+                    Self::Enabled
+                        | Self::HostnameRstrip
+                        | Self::WorktreeOutside
+                        | Self::WorktreeOriginalBranch
+                        | Self::GitAutohideBranch
+                        | Self::GitShowSha
+                        | Self::PrReviewState
+                        | Self::PrUrl
+                        | Self::PrOscHyperlinks
+                        | Self::UsageValue
+                        | Self::EffortLevel
+                        | Self::ModelSearch
+                        | Self::ModelReplace
+                ),
+                Kind::Colors => matches!(
+                    field,
+                    Self::IconColor | Self::TextColor | Self::BackgroundColor | Self::Bold
+                ),
+                Kind::Icons => !matches!(
+                    field,
+                    Self::Enabled
+                        | Self::HostnameRstrip
+                        | Self::WorktreeOutside
+                        | Self::WorktreeOriginalBranch
+                        | Self::GitAutohideBranch
+                        | Self::GitShowSha
+                        | Self::PrReviewState
+                        | Self::PrUrl
+                        | Self::PrOscHyperlinks
+                        | Self::UsageValue
+                        | Self::EffortLevel
+                        | Self::ModelSearch
+                        | Self::ModelReplace
+                        | Self::IconColor
+                        | Self::TextColor
+                        | Self::BackgroundColor
+                        | Self::Bold
+                ),
+                Kind::Theme => false,
+            })
+            .collect()
     }
 }
 
@@ -140,17 +193,18 @@ impl EditorWidget {
     pub fn render(
         f: &mut Frame,
         area: Rect,
-        theme: &UserTheme,
+        theme: &ResolvedTheme,
         selected_component: usize,
         is_focused: bool,
         selected_field: FieldSelection,
+        kind: crate::config::catalog::Kind,
     ) {
         let comp = match theme.components.get(selected_component) {
             Some(c) => c,
             None => return,
         };
 
-        let visible_fields = FieldSelection::fields_for(comp);
+        let visible_fields = FieldSelection::fields_for_kind(comp, kind);
 
         let pm = comp.icon.per_model.as_ref();
         let field_data: Vec<(&str, String, Option<Color>)> = visible_fields
@@ -161,8 +215,54 @@ impl EditorWidget {
                     if comp.enabled { "Yes" } else { "No" }.into(),
                     None,
                 ),
-                FieldSelection::StyleMode => {
-                    ("Style Mode", theme.style.mode.display_name().into(), None)
+                FieldSelection::GitShowSha => (
+                    "Show SHA",
+                    if comp
+                        .options
+                        .get("show_sha")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                    {
+                        "Yes"
+                    } else {
+                        "No"
+                    }
+                    .into(),
+                    None,
+                ),
+                FieldSelection::GlyphMode => (
+                    "Glyph Mode",
+                    if matches!(
+                        theme.style.mode,
+                        crate::config::types::StyleMode::Plain
+                            | crate::config::types::StyleMode::PlainPowerline
+                    ) {
+                        "Plain"
+                    } else {
+                        "Nerd Font"
+                    }
+                    .into(),
+                    None,
+                ),
+                FieldSelection::Powerline => (
+                    "Powerline",
+                    if matches!(
+                        theme.style.mode,
+                        crate::config::types::StyleMode::Powerline
+                            | crate::config::types::StyleMode::PlainPowerline
+                    ) {
+                        "Yes"
+                    } else {
+                        "No"
+                    }
+                    .into(),
+                    None,
+                ),
+                FieldSelection::PowerlinePlain => {
+                    ("Connector Plain", theme.powerline_plain.clone(), None)
+                }
+                FieldSelection::PowerlineNerd => {
+                    ("Connector Nerd", theme.powerline_nerd_font.clone(), None)
                 }
                 FieldSelection::PlainIcon => ("Plain Icon", comp.icon.plain.clone(), None),
                 FieldSelection::NerdFontIcon => ("Nerd Icon", comp.icon.nerd_font.clone(), None),
@@ -438,41 +538,14 @@ impl EditorWidget {
             .unwrap_or(0);
         let inner_height = area.height.saturating_sub(2) as usize; // borders
 
-        let items = if total <= inner_height {
-            all_items
-        } else {
-            // Both arrows always shown; visible slots = inner_height - 2
-            let visible = inner_height.saturating_sub(2);
-            let half = visible / 2;
-            let raw_offset = selected_idx.saturating_sub(half);
-            let max_offset = total.saturating_sub(visible);
-            let offset = raw_offset.min(max_offset);
-
-            let has_above = offset > 0;
-            let has_below = offset + visible < total;
-            let arrow_active = Style::default().fg(Color::Gray);
-            let arrow_inactive = Style::default().fg(Color::DarkGray);
-
-            let mut visible_items: Vec<ListItem> = Vec::new();
-            visible_items.push(ListItem::new(Line::from(Span::styled(
-                " \u{2bac}",
-                if has_above {
-                    arrow_active
-                } else {
-                    arrow_inactive
-                },
-            ))));
-            visible_items.extend(all_items.into_iter().skip(offset).take(visible));
-            visible_items.push(ListItem::new(Line::from(Span::styled(
-                " \u{2bae}",
-                if has_below {
-                    arrow_active
-                } else {
-                    arrow_inactive
-                },
-            ))));
-            visible_items
-        };
+        let offset = selected_idx
+            .saturating_sub(inner_height / 2)
+            .min(total.saturating_sub(inner_height));
+        let items: Vec<_> = all_items
+            .into_iter()
+            .skip(offset)
+            .take(inner_height)
+            .collect();
 
         let border_style = if is_focused {
             Style::default().fg(Color::Blue)
@@ -481,9 +554,32 @@ impl EditorWidget {
         };
 
         let title = Line::from(vec![
-            Span::styled(format!(" {} ", comp.display_name()), border_style),
             Span::styled(
-                format!("- {} ", comp.id.description()),
+                format!(
+                    " {} ",
+                    if comp.id == ComponentId::Unknown {
+                        "Defaults"
+                    } else if comp.id == ComponentId::Separator
+                        && kind == crate::config::catalog::Kind::Icons
+                    {
+                        "Mode / Separators"
+                    } else {
+                        comp.display_name()
+                    }
+                ),
+                border_style,
+            ),
+            Span::styled(
+                format!(
+                    "- {} ",
+                    if comp.id == ComponentId::Unknown {
+                        "Fallback values"
+                    } else if comp.id == ComponentId::Separator {
+                        "Between visible components"
+                    } else {
+                        comp.id.description()
+                    }
+                ),
                 Style::default().fg(Color::DarkGray),
             ),
         ]);
@@ -491,7 +587,8 @@ impl EditorWidget {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(border_style)
-            .title(title);
+            .title(title)
+            .title_bottom(format!(" {}/{} ↑↓ ", selected_idx + 1, total));
 
         let list = List::new(items).block(block);
         f.render_widget(list, area);
@@ -512,12 +609,12 @@ fn swatch_color(color: Option<&AnsiColor>) -> Option<Color> {
 #[cfg(test)]
 mod tests {
     use super::FieldSelection;
-    use crate::config::theme::UserTheme;
+    use crate::config::theme::ResolvedTheme;
     use crate::config::types::ComponentId;
 
     #[test]
     fn rstrip_is_only_available_for_hostname() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let hostname = theme.get_component(ComponentId::Hostname).unwrap();
         let directory = theme.get_component(ComponentId::Directory).unwrap();
 
@@ -527,7 +624,7 @@ mod tests {
 
     #[test]
     fn pull_request_fields_include_all_visibility_toggles() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let pull_request = theme.get_component(ComponentId::PullRequest).unwrap();
         let fields = FieldSelection::fields_for(pull_request);
 
@@ -538,7 +635,7 @@ mod tests {
 
     #[test]
     fn original_branch_is_only_available_for_worktree() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let worktree = theme.get_component(ComponentId::Worktree).unwrap();
         let git = theme.get_component(ComponentId::Git).unwrap();
 
@@ -552,7 +649,7 @@ mod tests {
 
     #[test]
     fn autohide_branch_is_only_available_for_git_status() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let git = theme.get_component(ComponentId::Git).unwrap();
         let worktree = theme.get_component(ComponentId::Worktree).unwrap();
 
@@ -562,7 +659,7 @@ mod tests {
 
     #[test]
     fn value_is_only_available_for_the_usage_components() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let five_hour = theme.get_component(ComponentId::UsageFiveHour).unwrap();
         let seven_day = theme.get_component(ComponentId::UsageSevenDay).unwrap();
         let context = theme.get_component(ComponentId::ContextWindow).unwrap();
@@ -574,7 +671,7 @@ mod tests {
 
     #[test]
     fn model_search_and_replace_are_only_available_for_model() {
-        let theme = UserTheme::default_theme();
+        let theme = ResolvedTheme::default_theme();
         let model = theme.get_component(ComponentId::Model).unwrap();
         let directory = theme.get_component(ComponentId::Directory).unwrap();
 

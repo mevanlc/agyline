@@ -23,5 +23,6 @@ unicode_names2 = "2"
 regex = "1"
 ratatui-textarea = "0.9"
 
-[dev-dependencies]
 tempfile = "3"
+unicode-width = "0.2"
+unicode-segmentation = "1.12"

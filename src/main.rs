@@ -14,7 +14,7 @@ fn print_help() {
     println!("    -h, --help                Print this help message");
     println!("    -V, --version             Print version");
     println!("    --config-dir <path>       Use a different agyline config directory");
-    println!("    --install-themes          Install/reinstall default themes");
+    println!("    --validate-config         Validate the named theme catalog without writing");
     println!("    --setup                   Configure Antigravity CLI settings to use agyline");
     println!(
         "    --setup-force             Configure Antigravity CLI settings to use agyline (overwrite existing)"
@@ -57,8 +57,41 @@ fn config_dir_arg(args: &[String]) -> Result<Option<PathBuf>, &'static str> {
     Ok(config_dir)
 }
 
+fn validate_args(args: &[String]) -> Result<(), String> {
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--config-dir" => {
+                i += 1;
+                if i == args.len() || args[i].is_empty() || args[i].starts_with('-') {
+                    return Err(CONFIG_DIR_ERROR.into());
+                }
+            }
+            "-h" | "--help" | "-V" | "--version" | "--setup" | "--setup-force" | "--unsetup"
+            | "--validate-config" => {}
+            arg if arg.starts_with("--config-dir=") => {
+                if arg == "--config-dir=" {
+                    return Err(CONFIG_DIR_ERROR.into());
+                }
+            }
+            arg => {
+                return Err(format!(
+                    "Unknown argument: {arg}. Use --help for supported options."
+                ));
+            }
+        }
+        i += 1;
+    }
+    Ok(())
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+
+    if let Err(e) = validate_args(&args) {
+        eprintln!("agyline: {e}");
+        std::process::exit(2);
+    }
 
     if args.iter().any(|a| a == "--help" || a == "-h") {
         print_help();
@@ -149,33 +182,15 @@ fn main() {
         return;
     }
 
-    // Handle --install-themes
-    if args.iter().any(|a| a == "--install-themes") {
-        let dir = agyline::config::manager::themes_dir();
-        if let Err(e) = std::fs::create_dir_all(&dir) {
-            eprintln!("agyline: cannot create themes dir: {}", e);
-            std::process::exit(1);
-        }
-        match agyline::config::manager::write_default_themes(&dir, true) {
-            Ok(n) => {
-                eprintln!(
-                    "agyline: installed {} default theme(s) to {}",
-                    n,
-                    dir.display()
-                );
-            }
+    if args.iter().any(|a| a == "--validate-config") {
+        match agyline::config::store::Store::open(&agyline::config::manager::config_dir()) {
+            Ok(store) => println!("Valid catalog: {}", store.path.display()),
             Err(e) => {
-                eprintln!("agyline: error installing themes: {}", e);
+                eprintln!("agyline: {e}");
                 std::process::exit(1);
             }
         }
         return;
-    }
-
-    // Bootstrap: ensure themes dir exists with starter themes
-    if let Err(e) = agyline::config::manager::bootstrap() {
-        eprintln!("agyline: bootstrap error: {}", e);
-        std::process::exit(1);
     }
 
     let stdin_is_terminal = io::stdin().is_terminal();
@@ -274,7 +289,9 @@ fn run_statusline() {
     };
 
     // Load active theme
-    let (_name, _path, theme) = match agyline::config::manager::load_active_theme() {
+    let theme = match agyline::config::store::Store::open(&agyline::config::manager::config_dir())
+        .and_then(|store| store.base.resolve(&store.base.active_theme))
+    {
         Ok(t) => t,
         Err(e) => {
             eprintln!("agyline: theme load error: {}", e);

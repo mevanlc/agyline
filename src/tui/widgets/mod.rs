@@ -1,14 +1,6 @@
 pub mod banner;
 pub mod color_picker;
-pub mod component_list;
-pub mod confirm_dialog;
 pub mod editor;
-pub mod file_menu;
-pub mod help_bar;
 pub mod icon_picker;
-pub mod import_menu;
 pub mod key_hints;
 pub mod name_input;
-pub mod open_menu;
-pub mod preview;
-pub mod theme_bar;

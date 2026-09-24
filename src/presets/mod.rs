@@ -3,7 +3,7 @@ pub mod icon_sets;
 
 #[cfg(test)]
 mod tests {
-    use crate::config::theme::UserTheme;
+    use crate::config::theme::ResolvedTheme;
     use crate::config::types::ComponentId;
 
     #[test]
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_apply_color_scheme() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         let nord = super::color_schemes::find("Nord").unwrap();
         nord.apply_to(&mut theme.components);
 
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn test_apply_icon_set() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         let powerline = super::icon_sets::find("Powerline").unwrap();
         powerline.apply_to(&mut theme.components);
 
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_color_scheme_does_not_change_icons() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         let original_icon = theme
             .get_component(ComponentId::Model)
             .unwrap()
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_icon_set_does_not_change_colors() {
-        let mut theme = UserTheme::default_theme();
+        let mut theme = ResolvedTheme::default_theme();
         let original_color = theme
             .get_component(ComponentId::Model)
             .unwrap()

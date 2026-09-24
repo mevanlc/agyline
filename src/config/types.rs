@@ -256,6 +256,25 @@ pub enum ComponentId {
 }
 
 impl ComponentId {
+    pub fn key(self) -> String {
+        serde_json::to_value(self)
+            .expect("component ID")
+            .as_str()
+            .unwrap()
+            .to_owned()
+    }
+
+    pub fn from_key(key: &str) -> Self {
+        serde_json::from_value(serde_json::Value::String(key.into())).unwrap_or(Self::Unknown)
+    }
+
+    pub fn data_components() -> impl Iterator<Item = Self> {
+        Self::ALL
+            .iter()
+            .copied()
+            .filter(|id| *id != Self::Separator)
+    }
+
     /// All component IDs in default order (separator last).
     pub const ALL: &[ComponentId] = &[
         ComponentId::AgentState,
@@ -418,7 +437,8 @@ impl Default for StyleConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ModelTierIcons {
     pub plain: String,
     pub nerd_font: String,
@@ -447,47 +467,9 @@ impl ModelTierIcons {
     }
 }
 
-impl Serialize for ModelTierIcons {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        if self.plain == self.nerd_font {
-            serializer.serialize_str(&self.plain)
-        } else {
-            use serde::ser::SerializeStruct;
-            let mut state = serializer.serialize_struct("ModelTierIcons", 2)?;
-            state.serialize_field("plain", &self.plain)?;
-            state.serialize_field("nerd_font", &self.nerd_font)?;
-            state.end()
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for ModelTierIcons {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum Helper {
-            Single(String),
-            Detailed { plain: String, nerd_font: String },
-        }
-
-        match Helper::deserialize(deserializer)? {
-            Helper::Single(s) => Ok(ModelTierIcons {
-                plain: s.clone(),
-                nerd_font: s,
-            }),
-            Helper::Detailed { plain, nerd_font } => Ok(ModelTierIcons { plain, nerd_font }),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default)]
+#[serde(deny_unknown_fields)]
 pub struct PerModelIcons {
     pub enabled: bool,
     pub flash: ModelTierIcons,
@@ -518,7 +500,7 @@ impl Default for PerModelIcons {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct IconConfig {
     pub plain: String,
     pub nerd_font: String,
@@ -527,7 +509,7 @@ pub struct IconConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(untagged, deny_unknown_fields)]
 pub enum AnsiColor {
     Color16 { c16: u8 },
     Color256 { c256: u8 },
@@ -568,7 +550,7 @@ impl fmt::Display for AnsiColor {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ColorConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<AnsiColor>,
@@ -578,12 +560,12 @@ pub struct ColorConfig {
     pub background: Option<AnsiColor>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct TextStyleConfig {
     pub text_bold: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComponentConfig {
     pub id: ComponentId,
     pub enabled: bool,
@@ -679,30 +661,5 @@ mod tests {
             WorktreeOutside::Directory.component_name(),
             "Worktree (or Directory)"
         );
-    }
-
-    #[test]
-    fn model_tier_icons_deserializes_single_and_detailed_forms() {
-        let single_toml = r#"
-            opus = "🐙"
-            sonnet = { plain = "🎶", nerd_font = "󰏒" }
-        "#;
-
-        #[derive(Deserialize)]
-        struct TestConfig {
-            opus: ModelTierIcons,
-            sonnet: ModelTierIcons,
-        }
-
-        let cfg: TestConfig = toml::from_str(single_toml).unwrap();
-        assert_eq!(cfg.opus.plain, "🐙");
-        assert_eq!(cfg.opus.nerd_font, "🐙");
-        assert_eq!(cfg.sonnet.plain, "🎶");
-        assert_eq!(cfg.sonnet.nerd_font, "󰏒");
-
-        assert_eq!(cfg.opus.for_mode(StyleMode::Plain), "🐙");
-        assert_eq!(cfg.opus.for_mode(StyleMode::NerdFont), "🐙");
-        assert_eq!(cfg.sonnet.for_mode(StyleMode::Plain), "🎶");
-        assert_eq!(cfg.sonnet.for_mode(StyleMode::NerdFont), "󰏒");
     }
 }

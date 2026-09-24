@@ -1,4 +1,4 @@
-use crate::tui::app::{ColorPickerMode, ColorPickerState};
+use crate::tui::editor_state::{ColorPickerMode, ColorPickerState};
 use ratatui::{
     Frame,
     layout::{Constraint, Flex, Layout, Rect},
