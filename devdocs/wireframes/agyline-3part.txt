@@ -1,0 +1,26 @@
+┌ Named Component Config ──────────┐  ┌─ Named Icon Config ─────────────┐  ┌ Named Color Config ─────────────┐
+│                                  │  │                                 │  │                                 │
+│ defines/stores customs/presets:  │  │ defines/stores customs/presets: │  │ defines/stores customs/presets: │
+│                                  │  │                                 │  │                                 │
+│      ordering, enablement,       │  │      icon codepoints/mode       │  │             colors              │
+│         properties, etc.         │  │     powerline style on/off?     │  │                                 │
+│                                  │  │        separator config?        │  │                                 │
+│                                  │  │                                 │  │                                 │
+│                                  │  │                                 │  │                                 │
+└──────────────────────────────────┘  └─────────────────────────────────┘  └─────────────────────────────────┘
+                  ╲                                    │                                    ╱
+                   ╲                                   │                                   ╱
+                    ╲                                  │                                  ╱
+                     '──────────────────────────────.  │  .──────────────────────────────'
+                                                     ╲ │ ╱
+                                     ┌ Named Theme ───▼▼▼───────────────┐
+                                     │                                  │
+                                     │      associates (by name):       │
+                                     │                                  │
+                                     │      1. a component-config       │
+                                     │      2. an icon-config           │
+                                     │      3. a color config           │
+                                     │                                  │
+                                     │    this is what agyline actually │
+                                     │    renders / user finally activa │
+                                     └──────────────────────────────────┘
